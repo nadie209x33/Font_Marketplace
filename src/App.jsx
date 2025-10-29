@@ -12,6 +12,7 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminOrdersPage from "./pages/AdminOrdersPage";
 import OtpPage from "./pages/OtpPage";
 import AdminProductsPage from "./pages/AdminProductsPage";
+import AdminCouponsPage from "./pages/AdminCouponsPage";
 import ProfilePage from "./pages/ProfilePage";
 import ProfileInformationPage from "./pages/ProfileInformationPage";
 import AddressesPage from "./pages/AddressesPage";
@@ -45,6 +46,7 @@ function App() {
               <Route path="/admin/users" element={<AdminUsersPage />} />
               <Route path="/admin/orders" element={<AdminOrdersPage />} />
               <Route path="/admin/products" element={<AdminProductsPage />} />
+              <Route path="/admin/coupons" element={<AdminCouponsPage />} />
             </Route>
 
             <Route element={<UserRoute />}>

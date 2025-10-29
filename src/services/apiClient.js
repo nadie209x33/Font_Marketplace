@@ -1,88 +1,67 @@
+import axios from "axios";
+
 const API_BASE_URL = "https://23.95.3.178:8443";
 
-const apiClient = {
-  async request(method, url, data = null, config = {}) {
-    const fullUrl = `${API_BASE_URL}${url}`;
+const axiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+});
 
-    const headers = {
-      ...config.headers,
-    };
-
+// Interceptor to add the auth token to every request
+axiosInstance.interceptors.request.use(
+  (config) => {
     const token = localStorage.getItem("token");
     if (token) {
-      headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
-
-    const fetchOptions = {
-      method,
-      headers,
-      ...config,
-    };
-
-    if (data) {
-      if (data.constructor === Object) {
-        headers["Content-Type"] = "application/json";
-        fetchOptions.body = JSON.stringify(data);
-      } else {
-        fetchOptions.body = data;
-      }
-    }
-
-    try {
-      const response = await fetch(fullUrl, fetchOptions);
-
-      const responseData = {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        data: null,
-      };
-
-      if (config.responseType === "blob") {
-        responseData.data = await response.blob();
-      } else {
-        const text = await response.text();
-        try {
-          responseData.data = JSON.parse(text);
-        } catch {
-          responseData.data = text;
-        }
-      }
-
-      if (!response.ok) {
-        const error = new Error(
-          responseData.data?.message || response.statusText,
-        );
-        error.response = responseData;
-        throw error;
-      }
-
-      return responseData;
-    } catch (error) {
-      console.error("API Client Error:", error);
-      throw error;
-    }
+    return config;
   },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
 
+// The response from axios is already in the format { data, status, headers, ... }
+// and it automatically throws for non-2xx status codes.
+// So the new apiClient is much simpler.
+
+const apiClient = {
   get(url, config = {}) {
-    return this.request("GET", url, null, config);
+    return axiosInstance.get(url, config);
   },
 
   post(url, data, config = {}) {
-    return this.request("POST", url, data, config);
+    return axiosInstance.post(url, data, config);
   },
 
   put(url, data, config = {}) {
-    return this.request("PUT", url, data, config);
+    return axiosInstance.put(url, data, config);
   },
 
   patch(url, data, config = {}) {
-    return this.request("PATCH", url, data, config);
+    return axiosInstance.patch(url, data, config);
   },
 
   delete(url, config = {}) {
-    return this.request("DELETE", url, null, config);
+    return axiosInstance.delete(url, config);
   },
 };
+
+// To handle errors in a centralized way, you can add a response interceptor
+axiosInstance.interceptors.response.use(
+  (response) => response, // Simply return the response if it's successful
+  (error) => {
+    // Log the error
+    console.error("API Client Error:", error.response || error.message);
+
+    // You can customize the error object here if needed
+    const customError = new Error(
+      error.response?.data?.message || error.message,
+    );
+    customError.response = error.response;
+
+    // Reject the promise with the custom error
+    return Promise.reject(customError);
+  },
+);
 
 export default apiClient;

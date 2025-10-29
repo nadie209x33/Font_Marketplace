@@ -62,7 +62,7 @@ const AddToCart = ({ product }) => {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    addToCart(product.id, quantity);
   };
 
   return (

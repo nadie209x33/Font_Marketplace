@@ -1,29 +1,39 @@
-import apiClient from './apiClient';
+import apiClient from "./apiClient";
 
 const getCart = () => {
-    return apiClient.get('/api/v1/cart');
+  return apiClient.get("/api/v1/cart");
 };
 
 const addToCart = (productId, quantity) => {
-    return apiClient.post('/api/v1/cart/items', { productId, quantity });
+  return apiClient.post("/api/v1/cart/items", { productId, quantity });
 };
 
 const updateCartItem = (itemId, quantity) => {
-    return apiClient.patch(`/api/v1/cart/items/${itemId}`, { quantity });
+  return apiClient.patch(`/api/v1/cart/items/${itemId}`, { quantity });
 };
 
 const removeFromCart = (itemId) => {
-    return apiClient.delete(`/api/v1/cart/items/${itemId}`);
+  return apiClient.delete(`/api/v1/cart/items/${itemId}`);
 };
 
 const clearCart = () => {
-    return apiClient.delete('/api/v1/cart/items');
+  return apiClient.delete("/api/v1/cart/items");
+};
+
+const applyCoupon = (codigo) => {
+  return apiClient.post("/api/v1/cart/cupon", { codigo });
+};
+
+const removeCoupon = () => {
+  return apiClient.post("/api/v1/cart/cupon", { codigo: "" });
 };
 
 export const cartService = {
-    getCart,
-    addToCart,
-    updateCartItem,
-    removeFromCart,
-    clearCart,
+  getCart,
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  applyCoupon,
+  removeCoupon,
 };

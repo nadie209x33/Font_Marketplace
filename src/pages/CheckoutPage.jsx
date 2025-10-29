@@ -1,11 +1,10 @@
 // src/pages/CheckoutPage.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { orderService } from "../services/orderService";
 import { useNavigate } from "react-router-dom";
 
 import { useCart } from "../hooks/useCart";
 import { addressService } from "../services/addressService";
-import { calcTotals } from "../utils/cartTotals";
 
 // --- estados iniciales ---
 const initialShipping = {
@@ -59,13 +58,15 @@ export default function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [orderId, setOrderId] = useState(null);
 
-  const { cart: ctxCart, clearCart } = useCart();
-  const { subtotal, totalItems } = useMemo(
-    () => calcTotals(ctxCart),
-    [ctxCart],
-  );
-  const shippingCost = 0;
-  const totalToPay = subtotal;
+  const {
+    cart, // El objeto completo del carrito
+    items: ctxCart, // El array de items
+    loading: cartLoading,
+    clearCart,
+  } = useCart();
+
+  const totalToPay = cart?.total || 0;
+  const totalItems = cart?.items?.length || 0;
   const navigate = useNavigate();
 
   // Direcciones guardadas
@@ -506,16 +507,18 @@ export default function CheckoutPage() {
                   <div className="border rounded p-3 mt-3">
                     <h6 className="fw-semibold">Resumen</h6>
                     <div className="d-flex justify-content-between small">
-                      <span className="text-muted">Artículos</span>
-                      <span>{totalItems}</span>
-                    </div>
-                    <div className="d-flex justify-content-between small">
                       <span className="text-muted">Subtotal</span>
-                      <span>{money(subtotal)}</span>
+                      <span>{money(cart?.subTotal || 0)}</span>
                     </div>
+                    {cart?.discount > 0 && (
+                      <div className="d-flex justify-content-between small text-success">
+                        <span className="text-muted">Descuento</span>
+                        <span>-{money(cart.discount)}</span>
+                      </div>
+                    )}
                     <div className="d-flex justify-content-between small">
                       <span className="text-muted">Shipping</span>
-                      <span>{money(shippingCost)}</span>
+                      <span>{money(0)}</span>
                     </div>
                     <hr className="my-2" />
                     <div className="d-flex justify-content-between">
@@ -573,16 +576,18 @@ export default function CheckoutPage() {
             <div className="card-body">
               <h6 className="fw-semibold mb-3">Order Summary</h6>
               <div className="d-flex justify-content-between small">
-                <span className="text-muted">Artículos</span>
-                <span>{totalItems}</span>
-              </div>
-              <div className="d-flex justify-content-between small">
                 <span className="text-muted">Subtotal</span>
-                <span>{money(subtotal)}</span>
+                <span>{money(cart?.subTotal || 0)}</span>
               </div>
+              {cart?.discount > 0 && (
+                <div className="d-flex justify-content-between small text-success">
+                  <span className="text-muted">Descuento</span>
+                  <span>-{money(cart.discount)}</span>
+                </div>
+              )}
               <div className="d-flex justify-content-between small">
                 <span className="text-muted">Shipping</span>
-                <span>{money(shippingCost)}</span>
+                <span>{money(0)}</span>
               </div>
               <hr className="my-2" />
               <div className="d-flex justify-content-between">

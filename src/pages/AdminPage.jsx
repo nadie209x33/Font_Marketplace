@@ -1,6 +1,6 @@
-import React from 'react';
-import { Container, Button, Stack } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
+import React from "react";
+import { Container, Button, Stack } from "react-bootstrap";
+import { LinkContainer } from "react-router-bootstrap";
 
 const AdminPage = () => {
   return (
@@ -20,6 +20,11 @@ const AdminPage = () => {
         <LinkContainer to="/admin/products">
           <Button variant="success" size="lg">
             Administrar Productos
+          </Button>
+        </LinkContainer>
+        <LinkContainer to="/admin/coupons">
+          <Button variant="info" size="lg">
+            Administrar Cupones
           </Button>
         </LinkContainer>
       </Stack>

@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
 import { useLocation } from "react-router-dom";
-import { productService } from "../services/productService";
+import { fetchProducts } from "../redux/productSlice";
+import { fetchCategories } from "../redux/categorySlice";
 
-// Helper function to find category by name in a tree
 const findCategoryByName = (categories, name) => {
   for (const category of categories) {
     if (category.name.toLowerCase() === name.toLowerCase()) {
@@ -17,50 +18,27 @@ const findCategoryByName = (categories, name) => {
 };
 
 export const useCatalog = () => {
-  const [products, setProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    page: 0,
-    size: 20,
-    totalPages: 1,
-  });
-  const [filters, setFilters] = useState({ q: "", categoryId: "" });
+  const dispatch = useDispatch();
   const location = useLocation();
 
-  const fetchCategories = useCallback(async () => {
-    try {
-      const categoriesData = await productService.getCategoriesTree();
-      setCategories(categoriesData);
-    } catch (err) {
-      setError(err.message);
-    }
-  }, []);
+  const {
+    products,
+    pagination: productPagination,
+    loading: productsLoading,
+    error: productsError,
+  } = useSelector((state) => state.product);
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useSelector((state) => state.category);
 
-  const fetchProducts = useCallback(async () => {
-    setLoading(true);
-    try {
-      const productsData = await productService.getProducts({
-        ...filters,
-        page: pagination.page,
-        size: pagination.size,
-      });
-      setProducts(productsData.products);
-      setPagination((prev) => ({
-        ...prev,
-        totalPages: productsData.totalPages,
-      }));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, pagination.page, pagination.size]);
+  const [filters, setFilters] = useState({ q: "", categoryId: "" });
+  const [pagination, setPagination] = useState({ page: 0, size: 20 });
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -75,12 +53,12 @@ export const useCatalog = () => {
   }, [location.search, categories]);
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    dispatch(fetchProducts({ filters, pagination }));
+  }, [dispatch, filters, pagination]);
 
   const handleFilterChange = (newFilters) => {
     setFilters((prev) => ({ ...prev, ...newFilters }));
-    setPagination((prev) => ({ ...prev, page: 0 })); // Reset to first page on filter change
+    setPagination((prev) => ({ ...prev, page: 0 }));
   };
 
   const handlePageChange = (newPage) => {
@@ -90,9 +68,9 @@ export const useCatalog = () => {
   return {
     products,
     categories,
-    loading,
-    error,
-    pagination,
+    loading: productsLoading || categoriesLoading,
+    error: productsError || categoriesError,
+    pagination: { ...pagination, totalPages: productPagination.totalPages },
     filters,
     handleFilterChange,
     handlePageChange,
