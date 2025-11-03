@@ -1,8 +1,13 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useLocation } from "react-router-dom";
 import { fetchProducts } from "../redux/productSlice";
 import { fetchCategories } from "../redux/categorySlice";
+import {
+  setComponentState,
+  clearComponentState,
+  setInitialComponentState,
+} from "../redux/uiSlice";
 
 const findCategoryByName = (categories, name) => {
   for (const category of categories) {
@@ -26,15 +31,30 @@ export const useCatalog = () => {
     pagination: productPagination,
     loading: productsLoading,
     error: productsError,
-  } = useSelector((state) => state.product);
+  } = useSelector((state) => state.products);
   const {
     categories,
     loading: categoriesLoading,
     error: categoriesError,
-  } = useSelector((state) => state.category);
+  } = useSelector((state) => state.categories);
 
-  const [filters, setFilters] = useState({ q: "", categoryId: "" });
-  const [pagination, setPagination] = useState({ page: 0, size: 20 });
+  const { filters, pagination } =
+    useSelector((state) => state.ui.componentState.useCatalog) || {};
+
+  useEffect(() => {
+    dispatch(
+      setInitialComponentState({
+        component: "useCatalog",
+        initialState: {
+          filters: { q: "", categoryId: "" },
+          pagination: { page: 0, size: 20 },
+        },
+      }),
+    );
+    return () => {
+      dispatch(clearComponentState({ component: "useCatalog" }));
+    };
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(fetchCategories());
@@ -47,7 +67,13 @@ export const useCatalog = () => {
     if (categoryName && categories.length > 0) {
       const category = findCategoryByName(categories, categoryName);
       if (category) {
-        setFilters((prev) => ({ ...prev, categoryId: category.id }));
+        dispatch(
+          setComponentState({
+            component: "useCatalog",
+            key: "filters",
+            value: { ...filters, categoryId: category.id },
+          }),
+        );
       }
     }
   }, [location.search, categories]);
@@ -57,12 +83,30 @@ export const useCatalog = () => {
   }, [dispatch, filters, pagination]);
 
   const handleFilterChange = (newFilters) => {
-    setFilters((prev) => ({ ...prev, ...newFilters }));
-    setPagination((prev) => ({ ...prev, page: 0 }));
+    dispatch(
+      setComponentState({
+        component: "useCatalog",
+        key: "filters",
+        value: { ...filters, ...newFilters },
+      }),
+    );
+    dispatch(
+      setComponentState({
+        component: "useCatalog",
+        key: "pagination",
+        value: { ...pagination, page: 0 },
+      }),
+    );
   };
 
   const handlePageChange = (newPage) => {
-    setPagination((prev) => ({ ...prev, page: newPage }));
+    dispatch(
+      setComponentState({
+        component: "useCatalog",
+        key: "pagination",
+        value: { ...pagination, page: newPage },
+      }),
+    );
   };
 
   return {

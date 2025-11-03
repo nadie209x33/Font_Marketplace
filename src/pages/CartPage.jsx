@@ -14,6 +14,12 @@ import {
 } from "react-bootstrap";
 import { Link } from "react-router-dom";
 import AuthImage from "../components/common/AuthImage";
+import { useDispatch, useSelector } from "react-redux";
+import {
+  setComponentState,
+  clearComponentState,
+  setInitialComponentState,
+} from "../redux/uiSlice";
 
 const CartPage = () => {
   const {
@@ -28,18 +34,54 @@ const CartPage = () => {
     removeCoupon,
   } = useCart();
 
-  const [couponCode, setCouponCode] = useState("");
-  const [couponError, setCouponError] = useState(null);
+  const dispatch = useDispatch();
+  const { couponCode, couponError } =
+    useSelector((state) => state.ui.componentState.CartPage) || {};
+
+  React.useEffect(() => {
+    dispatch(
+      setInitialComponentState({
+        component: "CartPage",
+        initialState: {
+          couponCode: "",
+          couponError: null,
+        },
+      }),
+    );
+    return () => {
+      dispatch(clearComponentState({ component: "CartPage" }));
+    };
+  }, [dispatch]);
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
     if (couponCode.trim()) {
-      try {
-        setCouponError(null);
-        applyCoupon(couponCode.trim());
-        setCouponCode("");
-      } catch {
-        setCouponError("El cupón no es válido o ha expirado.");
+      dispatch(
+        setComponentState({
+          component: "CartPage",
+          key: "couponError",
+          value: null,
+        }),
+      );
+      const resultAction = await applyCoupon(couponCode.trim());
+      if (resultAction.type.endsWith("/rejected")) {
+        dispatch(
+          setComponentState({
+            component: "CartPage",
+            key: "couponError",
+            value:
+              resultAction.payload.message ||
+              "El cupón no es válido o ha expirado.",
+          }),
+        );
+      } else {
+        dispatch(
+          setComponentState({
+            component: "CartPage",
+            key: "couponCode",
+            value: "",
+          }),
+        );
       }
     }
   };
@@ -57,10 +99,10 @@ const CartPage = () => {
     );
   }
 
-  if (error) {
+  if (error && !error.message?.includes("cupón")) {
     return (
       <Container className="my-5">
-        <Alert variant="danger">{error}</Alert>
+        <Alert variant="danger">{error.message || "Ocurrió un error"}</Alert>
       </Container>
     );
   }
@@ -185,18 +227,32 @@ const CartPage = () => {
                         placeholder="Código de cupón"
                         value={couponCode}
                         onChange={(e) => {
-                          setCouponCode(e.target.value);
-                          setCouponError(null);
+                          dispatch(
+                            setComponentState({
+                              component: "CartPage",
+                              key: "couponCode",
+                              value: e.target.value,
+                            }),
+                          );
+                          dispatch(
+                            setComponentState({
+                              component: "CartPage",
+                              key: "couponError",
+                              value: null,
+                            }),
+                          );
                         }}
                         isInvalid={!!couponError}
                       />
                       <Button type="submit" variant="primary">
                         Aplicar
                       </Button>
-                      <Form.Control.Feedback type="invalid">
-                        {couponError}
-                      </Form.Control.Feedback>
                     </InputGroup>
+                    {couponError && (
+                      <div className="text-danger mt-1 small">
+                        {couponError}
+                      </div>
+                    )}
                   </Form>
                 )}
               </div>

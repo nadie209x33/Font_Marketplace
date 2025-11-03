@@ -10,7 +10,7 @@ export const getCart = createAsyncThunk(
       return response.data;
     } catch (error) {
       if (error.response && error.response.status === 404) {
-        return null; // Cart is empty, not an error
+        return rejectWithValue({}); // Cart is empty, not an error
       }
       return rejectWithValue(error.response.data);
     }
@@ -25,6 +25,15 @@ const createCartActionThunk = (type, serviceCall) => {
         await serviceCall(payload);
         dispatch(getCart());
       } catch (error) {
+        if (
+          type === "cart/applyCoupon" &&
+          error.response &&
+          error.response.status === 500
+        ) {
+          return rejectWithValue({
+            message: "El cupón no es válido o ha expirado.",
+          });
+        }
         return rejectWithValue(error.response.data);
       }
     },
@@ -59,6 +68,15 @@ const initialState = {
   error: null,
 };
 
+const cartActions = [
+  addToCart,
+  updateCartItem,
+  removeFromCart,
+  clearCart,
+  applyCoupon,
+  removeCoupon,
+];
+
 const cartSlice = createSlice({
   name: "cart",
   initialState,
@@ -77,7 +95,18 @@ const cartSlice = createSlice({
         state.loading = false;
         state.error = action.payload;
       });
-    // Optionally handle pending/rejected states for other actions
+
+    cartActions.forEach((action) => {
+      builder
+        .addCase(action.pending, (state) => {
+          state.loading = true;
+          state.error = null;
+        })
+        .addCase(action.rejected, (state, action) => {
+          state.loading = false;
+          state.error = action.payload;
+        });
+    });
   },
 });
 

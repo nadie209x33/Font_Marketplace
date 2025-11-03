@@ -1,89 +1,154 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Spinner, Alert } from "react-bootstrap";
-import apiClient from "../services/apiClient";
+import { useDispatch, useSelector } from "react-redux";
+import { productService } from "../services/productService";
+import { fetchCategories } from "../redux/categorySlice";
+import { Modal, Button, Form, Alert, Spinner } from "react-bootstrap";
 import AuthImage from "../components/common/AuthImage";
+import CategoryOptions from "../components/common/CategoryOptions";
+import apiClient from "../services/apiClient";
+import {
+  setComponentState,
+  clearComponentState,
+  setInitialComponentState,
+} from "../redux/uiSlice";
 
-// A recursive component to render category options
-const CategoryOptions = ({ categories, level = 0 }) => {
-  return categories.map((category) => (
-    <React.Fragment key={category.id}>
-      <option value={category.id}>
-        {`${"--".repeat(level)} ${category.name}`}
-      </option>
-      {category.children && category.children.length > 0 && (
-        <CategoryOptions categories={category.children} level={level + 1} />
-      )}
-    </React.Fragment>
-  ));
-};
+const ProductFormModal = ({ product, show, onHide, onSave }) => {
+  const dispatch = useDispatch();
+  const {
+    categories,
+    loading: categoriesLoading,
+    error: categoriesError,
+  } = useSelector((state) => state.categories);
 
-const ProductFormModal = ({ show, onHide, product, onSave }) => {
-  const [formData, setFormData] = useState({});
-  const [categories, setCategories] = useState([]);
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [imageIds, setImageIds] = useState([]);
+  const componentId = React.useId();
+  const {
+    formData = {
+      name: "",
+      description: "",
+      categoryId: "",
+      price: "",
+      stock: "",
+      active: true,
+    },
+    images,
+    imageIds = [],
+    loading,
+    error,
+    showCategoryModal,
+    newCategoryName,
+    newCategoryParentId,
+    categoryLoading,
+    categoryError,
+  } = useSelector(
+    (state) => state.ui.componentState[`ProductFormModal_${componentId}`],
+  ) || {};
 
-  // State for the new category modal
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryParentId, setNewCategoryParentId] = useState(0);
-  const [categoryLoading, setCategoryLoading] = useState(false);
-  const [categoryError, setCategoryError] = useState(null);
-
-  const fetchCategories = async () => {
-    try {
-      const response = await apiClient.get("/api/v1/categories/tree");
-      setCategories(response.data);
-    } catch (err) {
-      console.error("Failed to fetch categories", err);
-      setError("Error al cargar las categorías.");
-    }
-  };
+  React.useEffect(() => {
+    dispatch(
+      setInitialComponentState({
+        component: `ProductFormModal_${componentId}`,
+        initialState: {
+          formData: {},
+          images: [],
+          imageIds: [],
+          loading: false,
+          error: null,
+          showCategoryModal: false,
+          newCategoryName: "",
+          newCategoryParentId: 0,
+          categoryLoading: false,
+          categoryError: null,
+        },
+      }),
+    );
+    return () => {
+      dispatch(
+        clearComponentState({ component: `ProductFormModal_${componentId}` }),
+      );
+    };
+  }, [dispatch, componentId]);
 
   useEffect(() => {
-    if (show) {
-      fetchCategories();
-    }
+    dispatch(fetchCategories());
+  }, [dispatch]);
 
+  useEffect(() => {
     if (product) {
-      setFormData({
-        name: product.name || "",
-        description: product.description || "",
-        price: product.price || 0,
-        categoryId: product.categoryId || 0,
-        stock: product.stock || 0,
-        active: product.active !== undefined ? product.active : true,
-      });
-      setImageIds(product.imageIds || []);
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "formData",
+          value: {
+            name: product.name || "",
+            description: product.description || "",
+            categoryId: product.categoryId || "",
+            price: product.price || "",
+            stock: product.stock || "",
+            active: product.active || false,
+          },
+        }),
+      );
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "imageIds",
+          value: product.imageIds || [],
+        }),
+      );
     } else {
       // Reset form for new product
-      setFormData({
-        name: "",
-        description: "",
-        price: 0,
-        categoryId: 0,
-        stock: 0,
-        active: true,
-      });
-      setImageIds([]);
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "formData",
+          value: {
+            name: "",
+            description: "",
+            categoryId: "",
+            price: "",
+            stock: "",
+            active: true,
+          },
+        }),
+      );
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "imageIds",
+          value: [],
+        }),
+      );
     }
-  }, [product, show]);
+  }, [product, dispatch, componentId]);
 
   const handleFormChange = (e) => {
     const { name, value, type, checked } = e.target;
     const val = name === "categoryId" ? parseInt(value, 10) : value;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : val,
-    }));
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "formData",
+        value: { ...formData, [name]: type === "checkbox" ? checked : val },
+      }),
+    );
   };
 
   const handleCreateCategory = async (e) => {
     e.preventDefault();
-    setCategoryLoading(true);
-    setCategoryError(null);
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "categoryLoading",
+        value: true,
+      }),
+    );
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "categoryError",
+        value: null,
+      }),
+    );
     try {
       const payload = {
         name: newCategoryName,
@@ -92,18 +157,54 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
       const response = await apiClient.post("/api/v1/categories", payload);
 
       // Reset and close the category modal
-      setShowCategoryModal(false);
-      setNewCategoryName("");
-      setNewCategoryParentId(0);
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "showCategoryModal",
+          value: false,
+        }),
+      );
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "newCategoryName",
+          value: "",
+        }),
+      );
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "newCategoryParentId",
+          value: 0,
+        }),
+      );
 
       // Refresh categories and select the new one
-      await fetchCategories();
-      setFormData((prev) => ({ ...prev, categoryId: response.data.id }));
+      await dispatch(fetchCategories());
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "formData",
+          value: { ...formData, categoryId: response.data.id },
+        }),
+      );
     } catch (err) {
-      setCategoryError("Error al crear la categoría.");
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "categoryError",
+          value: "Error al crear la categoría.",
+        }),
+      );
       console.error(err);
     } finally {
-      setCategoryLoading(false);
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "categoryLoading",
+          value: false,
+        }),
+      );
     }
   };
 
@@ -113,10 +214,22 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
 
     try {
       await apiClient.delete("/api/v1/images", { data: { id: imageId } });
-      setImageIds((currentIds) => currentIds.filter((id) => id !== imageId));
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "imageIds",
+          value: imageIds.filter((id) => id !== imageId),
+        }),
+      );
     } catch (err) {
       console.error("Failed to delete image", err);
-      setError("Error al eliminar la imagen. Por favor, inténtalo de nuevo.");
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "error",
+          value: "Error al eliminar la imagen. Por favor, inténtalo de nuevo.",
+        }),
+      );
     }
   };
 
@@ -132,17 +245,41 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
       newImageIds[index],
     ];
 
-    setImageIds(newImageIds);
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "imageIds",
+        value: newImageIds,
+      }),
+    );
   };
 
   const handleImageChange = (e) => {
-    setImages([...e.target.files]);
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "images",
+        value: [...e.target.files],
+      }),
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setError(null);
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "loading",
+        value: true,
+      }),
+    );
+    dispatch(
+      setComponentState({
+        component: `ProductFormModal_${componentId}`,
+        key: "error",
+        value: null,
+      }),
+    );
 
     try {
       // Step 1: Create or Update the product details
@@ -185,10 +322,22 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
 
       onSave(); // Notify parent to refresh and close modal
     } catch (err) {
-      setError("Error al guardar el producto. Por favor, inténtalo de nuevo.");
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "error",
+          value: "Error al guardar el producto. Por favor, inténtalo de nuevo.",
+        }),
+      );
       console.error(err);
     } finally {
-      setLoading(false);
+      dispatch(
+        setComponentState({
+          component: `ProductFormModal_${componentId}`,
+          key: "loading",
+          value: false,
+        }),
+      );
     }
   };
 
@@ -238,7 +387,15 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
               <Button
                 variant="outline-secondary"
                 className="ms-2"
-                onClick={() => setShowCategoryModal(true)}
+                onClick={() =>
+                  dispatch(
+                    setComponentState({
+                      component: `ProductFormModal_${componentId}`,
+                      key: "showCategoryModal",
+                      value: true,
+                    }),
+                  )
+                }
               >
                 Nueva
               </Button>
@@ -343,7 +500,15 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
       {/* Category Creation Modal */}
       <Modal
         show={showCategoryModal}
-        onHide={() => setShowCategoryModal(false)}
+        onHide={() =>
+          dispatch(
+            setComponentState({
+              component: `ProductFormModal_${componentId}`,
+              key: "showCategoryModal",
+              value: false,
+            }),
+          )
+        }
         centered
       >
         <Modal.Header closeButton>
@@ -357,7 +522,15 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
               <Form.Control
                 type="text"
                 value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
+                onChange={(e) =>
+                  dispatch(
+                    setComponentState({
+                      component: `ProductFormModal_${componentId}`,
+                      key: "newCategoryName",
+                      value: e.target.value,
+                    }),
+                  )
+                }
                 required
               />
             </Form.Group>
@@ -365,7 +538,15 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
               <Form.Label>Categoría Padre (opcional)</Form.Label>
               <Form.Select
                 value={newCategoryParentId}
-                onChange={(e) => setNewCategoryParentId(e.target.value)}
+                onChange={(e) =>
+                  dispatch(
+                    setComponentState({
+                      component: `ProductFormModal_${componentId}`,
+                      key: "newCategoryParentId",
+                      value: e.target.value,
+                    }),
+                  )
+                }
               >
                 <option value="0">Ninguna (Categoría Raíz)</option>
                 <CategoryOptions categories={categories} />
@@ -375,7 +556,15 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
           <Modal.Footer>
             <Button
               variant="secondary"
-              onClick={() => setShowCategoryModal(false)}
+              onClick={() =>
+                dispatch(
+                  setComponentState({
+                    component: `ProductFormModal_${componentId}`,
+                    key: "showCategoryModal",
+                    value: false,
+                  }),
+                )
+              }
               disabled={categoryLoading}
             >
               Cancelar

@@ -1,23 +1,23 @@
 import { useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { fetchProductData } from "../redux/productSlice";
+import { fetchProductPageData } from "../redux/productSlice";
 
 export const useProduct = (productId) => {
   const dispatch = useDispatch();
-  const { selectedProductData, loading, error } = useSelector(
-    (state) => state.product,
+  const { productPageData, loading, error } = useSelector(
+    (state) => state.products,
   );
 
   useEffect(() => {
     if (productId) {
-      dispatch(fetchProductData(productId));
+      dispatch(fetchProductPageData(productId));
     }
   }, [productId, dispatch]);
 
   return {
-    product: selectedProductData?.product,
-    breadcrumbs: selectedProductData?.breadcrumbs || [],
-    relatedProducts: selectedProductData?.relatedProducts || [],
+    product: productPageData?.product,
+    breadcrumbs: productPageData?.breadcrumbs || [],
+    relatedProducts: productPageData?.relatedProducts || [],
     loading,
     error,
   };

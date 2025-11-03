@@ -1,39 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, Spinner, Alert, Badge, ButtonGroup, Modal } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
-import apiClient from '../services/apiClient';
-import ProductFormModal from './ProductFormModal';
+import React, { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchProducts, deleteProduct } from "../redux/productSlice";
+import { LinkContainer } from "react-router-bootstrap";
+import {
+  Container,
+  Button,
+  Spinner,
+  Alert,
+  Table,
+  Badge,
+  ButtonGroup,
+  Modal,
+} from "react-bootstrap";
+import ProductFormModal from "./ProductFormModal";
 
 const AdminProductsPage = () => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const dispatch = useDispatch();
+  const { products, pagination, loading, error } = useSelector(
+    (state) => state.products,
+  );
   const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-
-  // Modal State
-  const [showFormModal, setShowFormModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showFormModal, setShowFormModal] = useState(false);
 
-  const fetchProducts = async (pageNum) => {
-    try {
-      setLoading(true);
-      const response = await apiClient.get(`/api/v1/admin/products/all?page=${pageNum}&size=20`);
-      setProducts(response.data.products);
-      setTotalPages(response.data.totalPages);
-    } catch (err) {
-      setError('Error al cargar los productos. Por favor, inténtalo de nuevo más tarde.');
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const totalPages = pagination?.totalPages || 0;
 
   useEffect(() => {
-    fetchProducts(page);
-  }, [page]);
+    dispatch(fetchProducts({ pagination: { page, size: 20 } }));
+  }, [dispatch, page]);
 
   const handleShowDeleteModal = (product) => {
     setProductToDelete(product);
@@ -45,15 +41,10 @@ const AdminProductsPage = () => {
     setShowDeleteModal(false);
   };
 
-  const handleDeleteProduct = async () => {
+  const handleDeleteProduct = () => {
     if (!productToDelete) return;
-    try {
-      await apiClient.delete(`/api/v1/products/${productToDelete.id}`);
-      fetchProducts(page); // Refresh the list
-      handleCloseDeleteModal();
-    } catch (err) {
-      console.error('Failed to delete product', err);
-    }
+    dispatch(deleteProduct(productToDelete.id));
+    handleCloseDeleteModal();
   };
 
   const handleShowCreateModal = () => {
@@ -76,7 +67,13 @@ const AdminProductsPage = () => {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Administrar Productos</h1>
         <div>
-          <Button variant="primary" className="me-2" onClick={handleShowCreateModal}>Crear Nuevo Producto</Button>
+          <Button
+            variant="primary"
+            className="me-2"
+            onClick={handleShowCreateModal}
+          >
+            Crear Nuevo Producto
+          </Button>
           <LinkContainer to="/admin">
             <Button variant="secondary">Volver al Menú de Administrador</Button>
           </LinkContainer>
@@ -112,19 +109,33 @@ const AdminProductsPage = () => {
                   <td>${product.price.toFixed(2)}</td>
                   <td>{product.stock}</td>
                   <td>
-                    <Badge bg={product.active ? 'success' : 'secondary'}>
-                      {product.active ? 'Activo' : 'Inactivo'}
+                    <Badge bg={product.active ? "success" : "secondary"}>
+                      {product.active ? "Activo" : "Inactivo"}
                     </Badge>
                   </td>
                   <td>
                     <ButtonGroup>
                       {product.active && (
                         <LinkContainer to={`/product/${product.id}`}>
-                          <Button variant="outline-info" size="sm">Ver</Button>
+                          <Button variant="outline-info" size="sm">
+                            Ver
+                          </Button>
                         </LinkContainer>
                       )}
-                      <Button variant="outline-primary" size="sm" onClick={() => handleShowEditModal(product)}>Editar</Button>
-                      <Button variant="outline-danger" size="sm" onClick={() => handleShowDeleteModal(product)}>Eliminar</Button>
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        onClick={() => handleShowEditModal(product)}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        variant="outline-danger"
+                        size="sm"
+                        onClick={() => handleShowDeleteModal(product)}
+                      >
+                        Eliminar
+                      </Button>
                     </ButtonGroup>
                   </td>
                 </tr>
@@ -134,10 +145,16 @@ const AdminProductsPage = () => {
 
           <div className="d-flex justify-content-center">
             <ButtonGroup>
-              <Button onClick={() => setPage(p => p - 1)} disabled={page === 0}>
+              <Button
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page === 0}
+              >
                 Anterior
               </Button>
-              <Button onClick={() => setPage(p => p + 1)} disabled={page >= totalPages - 1}>
+              <Button
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages - 1}
+              >
                 Siguiente
               </Button>
             </ButtonGroup>
@@ -151,7 +168,8 @@ const AdminProductsPage = () => {
           <Modal.Title>Eliminar Producto</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          ¿Estás seguro de que quieres eliminar el producto "{productToDelete?.name}"?
+          ¿Estás seguro de que quieres eliminar el producto "
+          {productToDelete?.name}"?
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={handleCloseDeleteModal}>
@@ -164,11 +182,11 @@ const AdminProductsPage = () => {
       </Modal>
 
       {/* Product Form Modal */}
-      <ProductFormModal 
-        show={showFormModal} 
-        onHide={() => setShowFormModal(false)} 
-        product={editingProduct} 
-        onSave={handleSaveProduct} 
+      <ProductFormModal
+        show={showFormModal}
+        onHide={() => setShowFormModal(false)}
+        product={editingProduct}
+        onSave={handleSaveProduct}
       />
     </Container>
   );
