@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import apiClient from '../services/apiClient';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
+import createApiClient from "../services/apiClient";
 
 const PageContainer = styled.div`
   display: flex;
@@ -46,7 +46,9 @@ const Form = styled.form`
     border: 1px solid #ced4da;
     border-radius: 6px;
     box-sizing: border-box;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    transition:
+      border-color 0.15s ease-in-out,
+      box-shadow 0.15s ease-in-out;
 
     &:focus {
       border-color: #80bdff;
@@ -65,7 +67,9 @@ const Form = styled.form`
     font-size: 1.1rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.3s, transform 0.1s;
+    transition:
+      background-color 0.3s,
+      transform 0.1s;
 
     &:hover {
       background-color: #0056b3;
@@ -92,24 +96,27 @@ const ErrorMessage = styled.p`
 `;
 
 const OtpPage = () => {
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      await apiClient.post('/api/v1/auth/activate', { email, otp });
+      const apiClient = createApiClient();
+      await apiClient.post("/api/v1/auth/activate", { email, otp });
       // On success, redirect to the login page
-      navigate('/login');
+      navigate("/login");
     } catch (err) {
-      setError('Error al activar la cuenta. Por favor, revisa tu correo electrónico y código OTP.');
-      console.error('Activation failed:', err);
+      setError(
+        "Error al activar la cuenta. Por favor, revisa tu correo electrónico y código OTP.",
+      );
+      console.error("Activation failed:", err);
     } finally {
       setLoading(false);
     }
@@ -142,7 +149,7 @@ const OtpPage = () => {
           </div>
           {error && <ErrorMessage>{error}</ErrorMessage>}
           <button type="submit" disabled={loading}>
-            {loading ? 'Verificando...' : 'Verificar'}
+            {loading ? "Verificando..." : "Verificar"}
           </button>
         </Form>
       </OtpCard>

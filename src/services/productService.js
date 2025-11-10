@@ -1,7 +1,8 @@
-import apiClient from "./apiClient";
+import createApiClient from "./apiClient";
 
 export const productService = {
-  async getProductById(productId) {
+  async getProductById(token, productId) {
+    const apiClient = createApiClient(token);
     console.log(
       `[productService] getProductById: Recibido productId: ${productId}`,
     );
@@ -21,7 +22,8 @@ export const productService = {
     }
   },
 
-  async getCategoryById(categoryId) {
+  async getCategoryById(token, categoryId) {
+    const apiClient = createApiClient(token);
     console.log(
       `[productService] getCategoryById: Recibido categoryId: ${categoryId}`,
     );
@@ -43,7 +45,8 @@ export const productService = {
     }
   },
 
-  async getProducts({ categoryId, q, page, size }) {
+  async getProducts(token, { categoryId, q, page, size }) {
+    const apiClient = createApiClient(token);
     try {
       const params = new URLSearchParams({ page, size });
       if (categoryId) params.append("categoryId", categoryId);
@@ -62,7 +65,8 @@ export const productService = {
     }
   },
 
-  async getCategoriesTree() {
+  async getCategoriesTree(token) {
+    const apiClient = createApiClient(token);
     try {
       const response = await apiClient.get("/api/v1/categories/tree");
       return response.data;
@@ -75,7 +79,8 @@ export const productService = {
     }
   },
 
-  async getImageBlob(imageId) {
+  async getImageBlob(token, imageId) {
+    const apiClient = createApiClient(token);
     try {
       const response = await apiClient.get(`/api/v1/images/${imageId}`, {
         responseType: "blob",

@@ -1,30 +1,37 @@
-import apiClient from "./apiClient";
+import createApiClient from "./apiClient";
 
-const getCart = () => {
+const getCart = (token) => {
+  const apiClient = createApiClient(token);
   return apiClient.get("/api/v1/cart");
 };
 
-const addToCart = (productId, quantity) => {
+const addToCart = (token, productId, quantity) => {
+  const apiClient = createApiClient(token);
   return apiClient.post("/api/v1/cart/items", { productId, quantity });
 };
 
-const updateCartItem = (itemId, quantity) => {
+const updateCartItem = (token, itemId, quantity) => {
+  const apiClient = createApiClient(token);
   return apiClient.patch(`/api/v1/cart/items/${itemId}`, { quantity });
 };
 
-const removeFromCart = (itemId) => {
+const removeFromCart = (token, itemId) => {
+  const apiClient = createApiClient(token);
   return apiClient.delete(`/api/v1/cart/items/${itemId}`);
 };
 
-const clearCart = () => {
+const clearCart = (token) => {
+  const apiClient = createApiClient(token);
   return apiClient.delete("/api/v1/cart/items");
 };
 
-const applyCoupon = (codigo) => {
+const applyCoupon = (token, codigo) => {
+  const apiClient = createApiClient(token);
   return apiClient.post("/api/v1/cart/cupon", { codigo });
 };
 
-const removeCoupon = () => {
+const removeCoupon = (token) => {
+  const apiClient = createApiClient(token);
   return apiClient.post("/api/v1/cart/cupon", { codigo: "" });
 };
 

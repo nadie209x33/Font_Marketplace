@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { orderService } from "../services/orderService";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 import { useCart } from "../hooks/useCart";
 import { addressService } from "../services/addressService";
@@ -65,6 +66,7 @@ export default function CheckoutPage() {
     clearCart,
   } = useCart();
 
+  const token = useSelector((state) => state.auth.token);
   const totalToPay = cart?.total || 0;
   const totalItems = cart?.items?.length || 0;
   const navigate = useNavigate();
@@ -75,8 +77,9 @@ export default function CheckoutPage() {
   const [isNewAddress, setIsNewAddress] = useState(false);
 
   const fetchAddresses = async () => {
+    if (!token) return;
     try {
-      const response = await addressService.getAddresses();
+      const response = await addressService.getAddresses(token);
       setAddresses(response.data);
       if (response.data.length > 0) {
         setSelectedAddressId(response.data[0].addressId);
@@ -88,7 +91,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     fetchAddresses();
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     if (selectedAddressId === "new") {
@@ -110,7 +113,7 @@ export default function CheckoutPage() {
 
   const handleSaveAddress = async () => {
     try {
-      await addressService.createAddress(shipping);
+      await addressService.createAddress(token, shipping);
       await fetchAddresses();
       setIsNewAddress(false);
     } catch {
@@ -170,7 +173,7 @@ export default function CheckoutPage() {
           price: item.price,
         })),
       };
-      const response = await orderService.createOrder(orderDetails);
+      const response = await orderService.createOrder(token, orderDetails);
       setOrderId(response.data.orderId);
       clearCart();
       navigate("/profile/orders");

@@ -4,9 +4,10 @@ import { productService } from "../services/productService";
 // Thunks
 export const fetchProducts = createAsyncThunk(
   "product/fetchProducts",
-  async ({ filters, pagination }, { rejectWithValue }) => {
+  async ({ filters, pagination }, { getState, rejectWithValue }) => {
     try {
-      const response = await productService.getProducts({
+      const token = getState().auth.token;
+      const response = await productService.getProducts(token, {
         ...filters,
         page: pagination.page,
         size: pagination.size,
@@ -20,9 +21,10 @@ export const fetchProducts = createAsyncThunk(
 
 export const fetchProductData = createAsyncThunk(
   "product/fetchProductData",
-  async (productId, { rejectWithValue }) => {
+  async (productId, { getState, rejectWithValue }) => {
     try {
-      const product = await productService.getProductById(productId);
+      const token = getState().auth.token;
+      const product = await productService.getProductById(token, productId);
       if (!product) {
         return rejectWithValue("Product not found");
       }
@@ -32,8 +34,10 @@ export const fetchProductData = createAsyncThunk(
         const path = [];
         let currentCategoryId = product.categoryId;
         while (currentCategoryId && currentCategoryId !== 0) {
-          const category =
-            await productService.getCategoryById(currentCategoryId);
+          const category = await productService.getCategoryById(
+            token,
+            currentCategoryId,
+          );
           path.unshift(category);
           currentCategoryId = category.parentId;
         }

@@ -1,17 +1,17 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import apiClient from "../services/apiClient";
+import createApiClient from "../services/apiClient";
 
 // Async Thunks
 export const loginUser = createAsyncThunk(
   "auth/loginUser",
   async ({ email, password }, { rejectWithValue }) => {
     try {
+      const apiClient = createApiClient();
       const response = await apiClient.post("/api/v1/auth/authenticate", {
         email,
         password,
       });
       const { access_token } = response.data;
-      localStorage.setItem("token", access_token);
       return access_token;
     } catch (error) {
       return rejectWithValue(error.response.data);
@@ -23,6 +23,7 @@ export const registerUser = createAsyncThunk(
   "auth/registerUser",
   async ({ firstName, lastName, mail, passkey }, { rejectWithValue }) => {
     try {
+      const apiClient = createApiClient();
       await apiClient.post("/api/v1/auth/register", {
         firstName,
         lastName,
@@ -37,12 +38,13 @@ export const registerUser = createAsyncThunk(
 
 export const fetchUser = createAsyncThunk(
   "auth/fetchUser",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
+      const token = getState().auth.token;
+      const apiClient = createApiClient(token);
       const response = await apiClient.get("/api/v1/auth/me");
       return response.data;
     } catch (error) {
-      localStorage.removeItem("token");
       return rejectWithValue(error.response.data);
     }
   },
@@ -50,7 +52,7 @@ export const fetchUser = createAsyncThunk(
 
 const initialState = {
   user: null,
-  token: localStorage.getItem("token") || null,
+  token: null,
   loading: false,
   error: null,
   isAuthenticated: false,
@@ -61,7 +63,6 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     logout: (state) => {
-      localStorage.removeItem("token");
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;

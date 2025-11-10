@@ -1,19 +1,24 @@
-import apiClient from './apiClient';
+import createApiClient from "./apiClient";
 
 export const addressService = {
-  getAddresses() {
-    return apiClient.get('/api/v1/addresses');
+  getAddresses(token) {
+    const apiClient = createApiClient(token);
+    return apiClient.get("/api/v1/addresses");
   },
-  getAddressById(addressId) {
+  getAddressById(token, addressId) {
+    const apiClient = createApiClient(token);
     return apiClient.get(`/api/v1/addresses/${addressId}`);
   },
-  createAddress(addressData) {
-    return apiClient.post('/api/v1/addresses', addressData);
+  createAddress(token, addressData) {
+    const apiClient = createApiClient(token);
+    return apiClient.post("/api/v1/addresses", addressData);
   },
-  updateAddress(addressId, addressData) {
+  updateAddress(token, addressId, addressData) {
+    const apiClient = createApiClient(token);
     return apiClient.put(`/api/v1/addresses/${addressId}`, addressData);
   },
-  deleteAddress(addressId) {
+  deleteAddress(token, addressId) {
+    const apiClient = createApiClient(token);
     return apiClient.delete(`/api/v1/addresses/${addressId}`);
   },
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Modal, Button, Form, Spinner, Alert } from "react-bootstrap";
-import apiClient from "../services/apiClient";
+import { useSelector } from "react-redux";
+import createApiClient from "../services/apiClient";
 import AuthImage from "../components/common/AuthImage";
 
 // A recursive component to render category options
@@ -32,8 +33,11 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
   const [categoryLoading, setCategoryLoading] = useState(false);
   const [categoryError, setCategoryError] = useState(null);
 
+  const token = useSelector((state) => state.auth.token);
+
   const fetchCategories = async () => {
     try {
+      const apiClient = createApiClient(token);
       const response = await apiClient.get("/api/v1/categories/tree");
       setCategories(response.data);
     } catch (err) {
@@ -85,6 +89,7 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
     setCategoryLoading(true);
     setCategoryError(null);
     try {
+      const apiClient = createApiClient(token);
       const payload = {
         name: newCategoryName,
         parentId: newCategoryParentId ? parseInt(newCategoryParentId, 10) : 0,
@@ -112,6 +117,7 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
       return;
 
     try {
+      const apiClient = createApiClient(token);
       await apiClient.delete("/api/v1/images", { data: { id: imageId } });
       setImageIds((currentIds) => currentIds.filter((id) => id !== imageId));
     } catch (err) {
@@ -145,6 +151,7 @@ const ProductFormModal = ({ show, onHide, product, onSave }) => {
     setError(null);
 
     try {
+      const apiClient = createApiClient(token);
       // Step 1: Create or Update the product details
       let productResponse;
       if (product) {

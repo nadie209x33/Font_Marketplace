@@ -10,6 +10,7 @@ import {
   Pagination,
 } from "react-bootstrap";
 import { LinkContainer } from "react-router-bootstrap";
+import { useSelector } from "react-redux";
 import { couponService } from "../services/couponService";
 import CustomPagination from "../components/common/CustomPagination";
 
@@ -34,10 +35,15 @@ const AdminCouponsPage = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
 
+  const token = useSelector((state) => state.auth.token);
+
   const fetchCoupons = async (page = 0) => {
     try {
       setLoading(true);
-      const response = await couponService.getCoupons({ page, size: 10 });
+      const response = await couponService.getCoupons(token, {
+        page,
+        size: 10,
+      });
       setCoupons(response.cupones);
       setTotalPages(response.totalPages);
       setCurrentPage(page);
@@ -50,8 +56,10 @@ const AdminCouponsPage = () => {
   };
 
   useEffect(() => {
-    fetchCoupons(currentPage);
-  }, [currentPage]);
+    if (token) {
+      fetchCoupons(currentPage);
+    }
+  }, [currentPage, token]);
 
   const handleModalClose = () => setShowCreateModal(false);
   const handleModalShow = () => setShowCreateModal(true);
@@ -70,7 +78,7 @@ const AdminCouponsPage = () => {
         usosMaximos: parseInt(newCoupon.usosMaximos, 10),
         fechaExpiracion: new Date(newCoupon.fechaExpiracion).toISOString(),
       };
-      await couponService.createCoupon(couponToCreate);
+      await couponService.createCoupon(token, couponToCreate);
       handleModalClose();
       fetchCoupons(currentPage); // Recargar
     } catch (err) {
@@ -114,7 +122,7 @@ const AdminCouponsPage = () => {
         usosMaximos: parseInt(editFormData.usosMaximos, 10),
         fechaExpiracion: new Date(editFormData.fechaExpiracion).toISOString(),
       };
-      await couponService.updateCoupon(editingCoupon.id, couponToUpdate);
+      await couponService.updateCoupon(token, editingCoupon.id, couponToUpdate);
       setShowEditModal(false);
       fetchCoupons(currentPage);
     } catch (err) {

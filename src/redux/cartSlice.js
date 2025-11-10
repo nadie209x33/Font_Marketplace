@@ -4,9 +4,10 @@ import { cartService } from "../services/cartService";
 // Async Thunks
 export const getCart = createAsyncThunk(
   "cart/getCart",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const response = await cartService.getCart();
+      const token = getState().auth.token;
+      const response = await cartService.getCart(token);
       return response.data;
     } catch (error) {
       if (error.response && error.response.status === 404) {
@@ -20,9 +21,10 @@ export const getCart = createAsyncThunk(
 const createCartActionThunk = (type, serviceCall) => {
   return createAsyncThunk(
     type,
-    async (payload, { dispatch, rejectWithValue }) => {
+    async (payload, { dispatch, getState, rejectWithValue }) => {
       try {
-        await serviceCall(payload);
+        const token = getState().auth.token;
+        await serviceCall(token, payload);
         dispatch(getCart());
       } catch (error) {
         return rejectWithValue(error.response.data);
@@ -31,26 +33,30 @@ const createCartActionThunk = (type, serviceCall) => {
   );
 };
 
-export const addToCart = createCartActionThunk("cart/addToCart", (payload) =>
-  cartService.addToCart(payload.productId, payload.quantity),
+export const addToCart = createCartActionThunk(
+  "cart/addToCart",
+  (token, payload) =>
+    cartService.addToCart(token, payload.productId, payload.quantity),
 );
 export const updateCartItem = createCartActionThunk(
   "cart/updateCartItem",
-  (payload) => cartService.updateCartItem(payload.itemId, payload.quantity),
+  (token, payload) =>
+    cartService.updateCartItem(token, payload.itemId, payload.quantity),
 );
 export const removeFromCart = createCartActionThunk(
   "cart/removeFromCart",
-  (itemId) => cartService.removeFromCart(itemId),
+  (token, itemId) => cartService.removeFromCart(token, itemId),
 );
-export const clearCart = createCartActionThunk("cart/clearCart", () =>
-  cartService.clearCart(),
+export const clearCart = createCartActionThunk("cart/clearCart", (token) =>
+  cartService.clearCart(token),
 );
 export const applyCoupon = createCartActionThunk(
   "cart/applyCoupon",
-  (couponCode) => cartService.applyCoupon(couponCode),
+  (token, couponCode) => cartService.applyCoupon(token, couponCode),
 );
-export const removeCoupon = createCartActionThunk("cart/removeCoupon", () =>
-  cartService.removeCoupon(),
+export const removeCoupon = createCartActionThunk(
+  "cart/removeCoupon",
+  (token) => cartService.removeCoupon(token),
 );
 
 const initialState = {

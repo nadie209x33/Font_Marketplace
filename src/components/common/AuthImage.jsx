@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import { productService } from "../../services/productService";
 import { Spinner } from "react-bootstrap";
 
@@ -6,6 +7,7 @@ const AuthImage = ({ imageId, alt, ...props }) => {
   const [imageUrl, setImageUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const token = useSelector((state) => state.auth.token);
 
   useEffect(() => {
     if (!imageId) {
@@ -20,7 +22,7 @@ const AuthImage = ({ imageId, alt, ...props }) => {
       try {
         setLoading(true);
         setError(false);
-        const blob = await productService.getImageBlob(imageId);
+        const blob = await productService.getImageBlob(token, imageId);
         objectUrl = URL.createObjectURL(blob);
         setImageUrl(objectUrl);
       } catch (e) {
@@ -39,7 +41,7 @@ const AuthImage = ({ imageId, alt, ...props }) => {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [imageId]);
+  }, [imageId, token]);
 
   if (loading) {
     return (

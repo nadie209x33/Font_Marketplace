@@ -4,9 +4,10 @@ import { productService } from "../services/productService";
 // Thunks
 export const fetchCategories = createAsyncThunk(
   "category/fetchCategories",
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const response = await productService.getCategoriesTree();
+      const token = getState().auth.token;
+      const response = await productService.getCategoriesTree(token);
       return response;
     } catch (error) {
       return rejectWithValue(error.response.data);

@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { Container, Table, Button, ButtonGroup, Spinner, Alert, Badge, Modal, Form } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
-import { useAuth } from '../hooks/useAuth';
-import apiClient from '../services/apiClient';
+import React, { useState, useEffect } from "react";
+import {
+  Container,
+  Table,
+  Button,
+  ButtonGroup,
+  Spinner,
+  Alert,
+  Badge,
+  Modal,
+  Form,
+} from "react-bootstrap";
+import { LinkContainer } from "react-router-bootstrap";
+import { useAuth } from "../hooks/useAuth";
+import { useSelector } from "react-redux";
+import createApiClient from "../services/apiClient";
 
 const AdminUsersPage = () => {
   const { user: currentUser } = useAuth();
@@ -21,13 +32,19 @@ const AdminUsersPage = () => {
   const [editingUser, setEditingUser] = useState(null);
   const [editFormData, setEditFormData] = useState({});
 
+  const token = useSelector((state) => state.auth.token);
+
   const fetchUsers = async () => {
+    if (!token) return;
     try {
       setLoading(true);
-      const response = await apiClient.get('/api/v1/admin/users');
+      const apiClient = createApiClient(token);
+      const response = await apiClient.get("/api/v1/admin/users");
       setUsers(response.data);
     } catch (err) {
-      setError('Error al cargar los usuarios. Por favor, inténtalo de nuevo más tarde.');
+      setError(
+        "Error al cargar los usuarios. Por favor, inténtalo de nuevo más tarde.",
+      );
       console.error(err);
     } finally {
       setLoading(false);
@@ -36,7 +53,7 @@ const AdminUsersPage = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [token]);
 
   const handleCloseOtpModal = () => {
     setShowOtpModal(false);
@@ -48,10 +65,11 @@ const AdminUsersPage = () => {
     setShowOtpModal(true);
     setOtpLoading(true);
     try {
+      const apiClient = createApiClient(token);
       const response = await apiClient.get(`/api/v1/admin/users/${userId}/otp`);
       setOtp(response.data.otp);
     } catch (err) {
-      setOtpError('Error al obtener el OTP.');
+      setOtpError("Error al obtener el OTP.");
       console.error(err);
     } finally {
       setOtpLoading(false);
@@ -62,10 +80,13 @@ const AdminUsersPage = () => {
     setShowOtpModal(true);
     setOtpLoading(true);
     try {
-      const response = await apiClient.post(`/api/v1/admin/users/${userId}/regenerate-otp`);
+      const apiClient = createApiClient(token);
+      const response = await apiClient.post(
+        `/api/v1/admin/users/${userId}/regenerate-otp`,
+      );
       setOtp(response.data.otp);
     } catch (err) {
-      setOtpError('Error al regenerar el OTP.');
+      setOtpError("Error al regenerar el OTP.");
       console.error(err);
     } finally {
       setOtpLoading(false);
@@ -78,7 +99,7 @@ const AdminUsersPage = () => {
       firstName: user.firstName,
       lastName: user.lastName,
       mail: user.mail,
-      password: '', // Password is not pre-filled for security
+      password: "", // Password is not pre-filled for security
       isEnabled: user.isActive,
       isEmailConfirmed: user.isEmailConfirmed,
     });
@@ -87,9 +108,9 @@ const AdminUsersPage = () => {
 
   const handleEditFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setEditFormData(prev => ({
+    setEditFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -101,46 +122,57 @@ const AdminUsersPage = () => {
     }
 
     try {
+      const apiClient = createApiClient(token);
       await apiClient.put(`/api/v1/admin/users/${editingUser.userId}`, payload);
       setShowEditModal(false);
       fetchUsers(); // Re-fetch users to show updated data
     } catch (err) {
-      console.error('Failed to update user', err);
+      console.error("Failed to update user", err);
       // You might want to show an error message in the modal
     }
   };
 
   const handleUpgrade = async (userId) => {
-    if (window.confirm('¿Estás seguro de que quieres ascender a este usuario a ADMIN?')) {
+    if (
+      window.confirm(
+        "¿Estás seguro de que quieres ascender a este usuario a ADMIN?",
+      )
+    ) {
       try {
+        const apiClient = createApiClient(token);
         await apiClient.post(`/api/v1/users/${userId}/upgrade`);
         fetchUsers();
       } catch (err) {
-        console.error('Error al ascender al usuario', err);
-        alert('Error al ascender al usuario.');
+        console.error("Error al ascender al usuario", err);
+        alert("Error al ascender al usuario.");
       }
     }
   };
 
   const handleDowngrade = async (userId) => {
-    if (window.confirm('¿Estás seguro de que quieres degradar a este usuario a USER?')) {
+    if (
+      window.confirm(
+        "¿Estás seguro de que quieres degradar a este usuario a USER?",
+      )
+    ) {
       try {
+        const apiClient = createApiClient(token);
         await apiClient.post(`/api/v1/users/${userId}/downgrade`);
         fetchUsers();
       } catch (err) {
-        console.error('Error al degradar al usuario', err);
-        alert('Error al degradar al usuario.');
+        console.error("Error al degradar al usuario", err);
+        alert("Error al degradar al usuario.");
       }
     }
   };
 
   const renderStatus = (user) => (
     <>
-      <Badge bg={user.isActive ? 'success' : 'secondary'} className="me-1">
-        {user.isActive ? 'Activo' : 'Inactivo'}
+      <Badge bg={user.isActive ? "success" : "secondary"} className="me-1">
+        {user.isActive ? "Activo" : "Inactivo"}
       </Badge>
-      <Badge bg={user.isEmailConfirmed ? 'primary' : 'warning'}>
-        {user.isEmailConfirmed ? 'Verificado' : 'No Verificado'}
+      <Badge bg={user.isEmailConfirmed ? "primary" : "warning"}>
+        {user.isEmailConfirmed ? "Verificado" : "No Verificado"}
       </Badge>
     </>
   );
@@ -188,14 +220,46 @@ const AdminUsersPage = () => {
                 <td>{renderStatus(user)}</td>
                 <td>
                   <ButtonGroup>
-                    <Button variant="outline-primary" size="sm" onClick={() => handleEditClick(user)}>Editar</Button>
-                    <Button variant="outline-info" size="sm" onClick={() => handleShowOtp(user.userId)}>Ver OTP</Button>
-                    <Button variant="outline-warning" size="sm" onClick={() => handleRegenerateOtp(user.userId)}>Regenerar OTP</Button>
-                    {user.authLevel === 'USER' && (
-                      <Button variant="success" size="sm" onClick={() => handleUpgrade(user.userId)} disabled={currentUser?.userId === user.userId}>Ascender</Button>
+                    <Button
+                      variant="outline-primary"
+                      size="sm"
+                      onClick={() => handleEditClick(user)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline-info"
+                      size="sm"
+                      onClick={() => handleShowOtp(user.userId)}
+                    >
+                      Ver OTP
+                    </Button>
+                    <Button
+                      variant="outline-warning"
+                      size="sm"
+                      onClick={() => handleRegenerateOtp(user.userId)}
+                    >
+                      Regenerar OTP
+                    </Button>
+                    {user.authLevel === "USER" && (
+                      <Button
+                        variant="success"
+                        size="sm"
+                        onClick={() => handleUpgrade(user.userId)}
+                        disabled={currentUser?.userId === user.userId}
+                      >
+                        Ascender
+                      </Button>
                     )}
-                    {user.authLevel === 'ADMIN' && (
-                      <Button variant="danger" size="sm" onClick={() => handleDowngrade(user.userId)} disabled={currentUser?.userId === user.userId}>Degradar</Button>
+                    {user.authLevel === "ADMIN" && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDowngrade(user.userId)}
+                        disabled={currentUser?.userId === user.userId}
+                      >
+                        Degradar
+                      </Button>
                     )}
                   </ButtonGroup>
                 </td>
@@ -233,37 +297,79 @@ const AdminUsersPage = () => {
 
       {/* Edit User Modal */}
       {editingUser && (
-        <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+        <Modal
+          show={showEditModal}
+          onHide={() => setShowEditModal(false)}
+          centered
+        >
           <Modal.Header closeButton>
-            <Modal.Title>Editar Usuario: {editingUser.firstName} {editingUser.lastName}</Modal.Title>
+            <Modal.Title>
+              Editar Usuario: {editingUser.firstName} {editingUser.lastName}
+            </Modal.Title>
           </Modal.Header>
           <Form onSubmit={handleUpdateUser}>
             <Modal.Body>
               <Form.Group className="mb-3">
                 <Form.Label>Nombre</Form.Label>
-                <Form.Control type="text" name="firstName" value={editFormData.firstName} onChange={handleEditFormChange} />
+                <Form.Control
+                  type="text"
+                  name="firstName"
+                  value={editFormData.firstName}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Apellido</Form.Label>
-                <Form.Control type="text" name="lastName" value={editFormData.lastName} onChange={handleEditFormChange} />
+                <Form.Control
+                  type="text"
+                  name="lastName"
+                  value={editFormData.lastName}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Correo Electrónico</Form.Label>
-                <Form.Control type="email" name="mail" value={editFormData.mail} onChange={handleEditFormChange} />
+                <Form.Control
+                  type="email"
+                  name="mail"
+                  value={editFormData.mail}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
               <Form.Group className="mb-3">
                 <Form.Label>Contraseña</Form.Label>
-                <Form.Control type="password" name="password" placeholder="Dejar en blanco para mantener la contraseña actual" value={editFormData.password} onChange={handleEditFormChange} />
+                <Form.Control
+                  type="password"
+                  name="password"
+                  placeholder="Dejar en blanco para mantener la contraseña actual"
+                  value={editFormData.password}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
               <Form.Group className="mb-3">
-                <Form.Check type="switch" label="Habilitado" name="isEnabled" checked={editFormData.isEnabled} onChange={handleEditFormChange} />
+                <Form.Check
+                  type="switch"
+                  label="Habilitado"
+                  name="isEnabled"
+                  checked={editFormData.isEnabled}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
               <Form.Group className="mb-3">
-                <Form.Check type="switch" label="Correo Confirmado" name="isEmailConfirmed" checked={editFormData.isEmailConfirmed} onChange={handleEditFormChange} />
+                <Form.Check
+                  type="switch"
+                  label="Correo Confirmado"
+                  name="isEmailConfirmed"
+                  checked={editFormData.isEmailConfirmed}
+                  onChange={handleEditFormChange}
+                />
               </Form.Group>
             </Modal.Body>
             <Modal.Footer>
-              <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => setShowEditModal(false)}
+              >
                 Cancelar
               </Button>
               <Button variant="primary" type="submit">
