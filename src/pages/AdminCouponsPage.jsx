@@ -7,173 +7,120 @@ import {
   Alert,
   Modal,
   Form,
+  Pagination,
 } from "react-bootstrap";
 import { LinkContainer } from "react-router-bootstrap";
-import { useDispatch, useSelector } from "react-redux";
-import { fetchCoupons, createCoupon, updateCoupon } from "../redux/couponSlice";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../redux/uiSlice";
+import { couponService } from "../services/couponService";
 import CustomPagination from "../components/common/CustomPagination";
 
 const AdminCouponsPage = () => {
-  const dispatch = useDispatch();
-  const { coupons, loading, error, currentPage, totalPages } = useSelector(
-    (state) => state.coupons,
-  );
+  const [coupons, setCoupons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newCoupon, setNewCoupon] = useState({
+    codigo: "",
+    porcentajeDescuento: "",
+    fechaExpiracion: "",
+    usosMaximos: "",
+  });
 
-  const {
-    showCreateModal,
-    newCoupon = {
-      codigo: "",
-      porcentajeDescuento: "",
-      fechaExpiracion: "",
-      usosMaximos: "",
-    },
-    showEditModal,
-    editingCoupon,
-    editFormData,
-  } = useSelector((state) => state.ui.componentState.AdminCouponsPage) || {};
+  // State for Edit Modal
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
 
-  useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: "AdminCouponsPage",
-        initialState: {
-          showCreateModal: false,
-          newCoupon: {
-            codigo: "",
-            porcentajeDescuento: "",
-            fechaExpiracion: "",
-            usosMaximos: "",
-          },
-          showEditModal: false,
-          editingCoupon: null,
-          editFormData: {},
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: "AdminCouponsPage" }));
-    };
-  }, [dispatch]);
+  // Paginación
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const fetchCoupons = async (page = 0) => {
+    try {
+      setLoading(true);
+      const response = await couponService.getCoupons({ page, size: 10 });
+      setCoupons(response.cupones);
+      setTotalPages(response.totalPages);
+      setCurrentPage(page);
+    } catch (err) {
+      setError("Error al cargar los cupones.");
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    dispatch(fetchCoupons({ page: currentPage }));
-  }, [dispatch, currentPage]);
+    fetchCoupons(currentPage);
+  }, [currentPage]);
 
-  const handleModalClose = () =>
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "showCreateModal",
-        value: false,
-      }),
-    );
-  const handleModalShow = () =>
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "showCreateModal",
-        value: true,
-      }),
-    );
+  const handleModalClose = () => setShowCreateModal(false);
+  const handleModalShow = () => setShowCreateModal(true);
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "newCoupon",
-        value: { ...newCoupon, [name]: value },
-      }),
-    );
+    setNewCoupon((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault();
-    const couponToCreate = {
-      ...newCoupon,
-      porcentajeDescuento: parseFloat(newCoupon.porcentajeDescuento),
-      usosMaximos: parseInt(newCoupon.usosMaximos, 10),
-      fechaExpiracion: new Date(newCoupon.fechaExpiracion).toISOString(),
-    };
-    dispatch(createCoupon(couponToCreate));
-    handleModalClose();
+    try {
+      const couponToCreate = {
+        ...newCoupon,
+        porcentajeDescuento: parseFloat(newCoupon.porcentajeDescuento),
+        usosMaximos: parseInt(newCoupon.usosMaximos, 10),
+        fechaExpiracion: new Date(newCoupon.fechaExpiracion).toISOString(),
+      };
+      await couponService.createCoupon(couponToCreate);
+      handleModalClose();
+      fetchCoupons(currentPage); // Recargar
+    } catch (err) {
+      console.error("Error al crear el cupón:", err);
+      // Aquí podrías mostrar un error en el modal
+    }
   };
 
   const handlePageChange = (pageNumber) => {
-    dispatch(fetchCoupons({ page: pageNumber }));
+    setCurrentPage(pageNumber);
   };
 
   const handleEditClick = (coupon) => {
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "editingCoupon",
-        value: coupon,
-      }),
-    );
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "editFormData",
-        value: {
-          codigo: coupon.codigo,
-          porcentajeDescuento: coupon.porcentajeDescuento,
-          fechaExpiracion: new Date(coupon.fechaExpiracion)
-            .toISOString()
-            .slice(0, 16),
-          usosMaximos: coupon.usosMaximos,
-          activo: coupon.activo,
-        },
-      }),
-    );
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "showEditModal",
-        value: true,
-      }),
-    );
+    setEditingCoupon(coupon);
+    setEditFormData({
+      codigo: coupon.codigo,
+      porcentajeDescuento: coupon.porcentajeDescuento,
+      fechaExpiracion: new Date(coupon.fechaExpiracion)
+        .toISOString()
+        .slice(0, 16),
+      usosMaximos: coupon.usosMaximos,
+      activo: coupon.activo,
+    });
+    setShowEditModal(true);
   };
 
   const handleEditFormChange = (e) => {
     const { name, value, type, checked } = e.target;
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "editFormData",
-        value: {
-          ...editFormData,
-          [name]: type === "checkbox" ? checked : value,
-        },
-      }),
-    );
+    setEditFormData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleUpdateCoupon = async (e) => {
     e.preventDefault();
-    const couponToUpdate = {
-      ...editFormData,
-      porcentajeDescuento: parseFloat(editFormData.porcentajeDescuento),
-      usosMaximos: parseInt(editFormData.usosMaximos, 10),
-      fechaExpiracion: new Date(editFormData.fechaExpiracion).toISOString(),
-    };
-    dispatch(
-      updateCoupon({ id: editingCoupon.id, couponData: couponToUpdate }),
-    );
-    dispatch(
-      setComponentState({
-        component: "AdminCouponsPage",
-        key: "showEditModal",
-        value: false,
-      }),
-    );
+    try {
+      const couponToUpdate = {
+        ...editFormData,
+        porcentajeDescuento: parseFloat(editFormData.porcentajeDescuento),
+        usosMaximos: parseInt(editFormData.usosMaximos, 10),
+        fechaExpiracion: new Date(editFormData.fechaExpiracion).toISOString(),
+      };
+      await couponService.updateCoupon(editingCoupon.id, couponToUpdate);
+      setShowEditModal(false);
+      fetchCoupons(currentPage);
+    } catch (err) {
+      console.error("Error al actualizar el cupón:", err);
+    }
   };
-
   return (
     <Container className="mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -358,15 +305,7 @@ const AdminCouponsPage = () => {
             <Modal.Footer>
               <Button
                 variant="secondary"
-                onClick={() =>
-                  dispatch(
-                    setComponentState({
-                      component: "AdminCouponsPage",
-                      key: "showEditModal",
-                      value: false,
-                    }),
-                  )
-                }
+                onClick={() => setShowEditModal(false)}
               >
                 Cancelar
               </Button>

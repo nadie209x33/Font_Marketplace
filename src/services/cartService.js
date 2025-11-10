@@ -25,7 +25,7 @@ const applyCoupon = (codigo) => {
 };
 
 const removeCoupon = () => {
-  return apiClient.delete("/api/v1/cart/cupon");
+  return apiClient.post("/api/v1/cart/cupon", { codigo: "" });
 };
 
 export const cartService = {

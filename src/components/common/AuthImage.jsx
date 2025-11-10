@@ -1,51 +1,16 @@
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { productService } from "../../services/productService";
 import { Spinner } from "react-bootstrap";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../../redux/uiSlice";
 
 const AuthImage = ({ imageId, alt, ...props }) => {
-  const dispatch = useDispatch();
-  const { imageUrl, loading, error } =
-    useSelector((state) => state.ui.componentState[`AuthImage_${imageId}`]) ||
-    {};
-
-  useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: `AuthImage_${imageId}`,
-        initialState: {
-          imageUrl: null,
-          loading: true,
-          error: false,
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: `AuthImage_${imageId}` }));
-    };
-  }, [dispatch, imageId]);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     if (!imageId) {
-      dispatch(
-        setComponentState({
-          component: `AuthImage_${imageId}`,
-          key: "loading",
-          value: false,
-        }),
-      );
-      dispatch(
-        setComponentState({
-          component: `AuthImage_${imageId}`,
-          key: "error",
-          value: true,
-        }),
-      );
+      setLoading(false);
+      setError(true);
       return;
     }
 
@@ -53,46 +18,16 @@ const AuthImage = ({ imageId, alt, ...props }) => {
 
     const fetchImage = async () => {
       try {
-        dispatch(
-          setComponentState({
-            component: `AuthImage_${imageId}`,
-            key: "loading",
-            value: true,
-          }),
-        );
-        dispatch(
-          setComponentState({
-            component: `AuthImage_${imageId}`,
-            key: "error",
-            value: false,
-          }),
-        );
+        setLoading(true);
+        setError(false);
         const blob = await productService.getImageBlob(imageId);
         objectUrl = URL.createObjectURL(blob);
-        dispatch(
-          setComponentState({
-            component: `AuthImage_${imageId}`,
-            key: "imageUrl",
-            value: objectUrl,
-          }),
-        );
+        setImageUrl(objectUrl);
       } catch (e) {
         console.error("Failed to fetch auth image", e);
-        dispatch(
-          setComponentState({
-            component: `AuthImage_${imageId}`,
-            key: "error",
-            value: true,
-          }),
-        );
+        setError(true);
       } finally {
-        dispatch(
-          setComponentState({
-            component: `AuthImage_${imageId}`,
-            key: "loading",
-            value: false,
-          }),
-        );
+        setLoading(false);
       }
     };
 
@@ -104,7 +39,7 @@ const AuthImage = ({ imageId, alt, ...props }) => {
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [imageId, dispatch]);
+  }, [imageId]);
 
   if (loading) {
     return (

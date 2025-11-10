@@ -1,13 +1,7 @@
-import React, { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
-import styled from "styled-components";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../redux/uiSlice";
+import React, { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 
 const PageContainer = styled.div`
   display: flex;
@@ -52,9 +46,7 @@ const Form = styled.form`
     border: 1px solid #ced4da;
     border-radius: 6px;
     box-sizing: border-box;
-    transition:
-      border-color 0.15s ease-in-out,
-      box-shadow 0.15s ease-in-out;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 
     &:focus {
       border-color: #80bdff;
@@ -73,9 +65,7 @@ const Form = styled.form`
     font-size: 1.1rem;
     font-weight: 500;
     cursor: pointer;
-    transition:
-      background-color 0.3s,
-      transform 0.1s;
+    transition: background-color 0.3s, transform 0.1s;
 
     &:hover {
       background-color: #0056b3;
@@ -101,70 +91,33 @@ const ErrorMessage = styled.p`
 `;
 
 const RegisterPage = () => {
-  const dispatch = useDispatch();
-  const {
-    firstName,
-    lastName,
-    email,
-    confirmEmail,
-    password,
-    confirmPassword,
-    error,
-  } = useSelector((state) => state.ui.componentState.RegisterPage) || {};
-
-  React.useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: "RegisterPage",
-        initialState: {
-          firstName: "",
-          lastName: "",
-          email: "",
-          confirmEmail: "",
-          password: "",
-          confirmPassword: "",
-          error: "",
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: "RegisterPage" }));
-    };
-  }, [dispatch]);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [confirmEmail, setConfirmEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
   const { register, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (email !== confirmEmail) {
-      dispatch(
-        setComponentState({
-          component: "RegisterPage",
-          key: "error",
-          value: "Los correos electrónicos no coinciden",
-        }),
-      );
+      setError('Los correos electrónicos no coinciden');
       return;
     }
     if (password !== confirmPassword) {
-      dispatch(
-        setComponentState({
-          component: "RegisterPage",
-          key: "error",
-          value: "Las contraseñas no coinciden",
-        }),
-      );
+      setError('Las contraseñas no coinciden');
       return;
     }
-    dispatch(
-      setComponentState({ component: "RegisterPage", key: "error", value: "" }),
-    );
+    setError('');
     const success = await register(firstName, lastName, email, password);
     if (success) {
-      navigate("/otp");
+      navigate('/otp');
     } else {
       // Handle registration error
-      alert("El registro falló");
+      alert('El registro falló');
     }
   };
 
@@ -179,15 +132,7 @@ const RegisterPage = () => {
               id="firstName"
               type="text"
               value={firstName}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "firstName",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setFirstName(e.target.value)}
               required
             />
           </div>
@@ -197,15 +142,7 @@ const RegisterPage = () => {
               id="lastName"
               type="text"
               value={lastName}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "lastName",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setLastName(e.target.value)}
               required
             />
           </div>
@@ -215,15 +152,7 @@ const RegisterPage = () => {
               id="email"
               type="email"
               value={email}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "email",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
@@ -233,15 +162,7 @@ const RegisterPage = () => {
               id="confirmEmail"
               type="email"
               value={confirmEmail}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "confirmEmail",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setConfirmEmail(e.target.value)}
               required
             />
           </div>
@@ -251,15 +172,7 @@ const RegisterPage = () => {
               id="password"
               type="password"
               value={password}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "password",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
@@ -269,21 +182,13 @@ const RegisterPage = () => {
               id="confirmPassword"
               type="password"
               value={confirmPassword}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "RegisterPage",
-                    key: "confirmPassword",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>
           {error && <ErrorMessage>{error}</ErrorMessage>}
           <button type="submit" disabled={loading}>
-            {loading ? "Registrando..." : "Registrarse"}
+            {loading ? 'Registrando...' : 'Registrarse'}
           </button>
         </Form>
       </RegisterCard>

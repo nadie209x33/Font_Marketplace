@@ -1,12 +1,7 @@
+import React, { useState } from "react";
 import { Row, Col, Form, Button } from "react-bootstrap";
 import { useCart } from "../../../hooks/useCart";
 import styled, { keyframes } from "styled-components";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../../../redux/uiSlice";
 
 const pulse = keyframes`
   0% {
@@ -53,46 +48,17 @@ const AddToCartButton = styled(Button)`
 `;
 
 const AddToCart = ({ product }) => {
-  const dispatch = useDispatch();
-  const { quantity } = useSelector(
-    (state) => state.ui.componentState[`AddToCart_${product.id}`],
-  ) || { quantity: 1 };
-
-  React.useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: `AddToCart_${product.id}`,
-        initialState: {
-          quantity: 1,
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: `AddToCart_${product.id}` }));
-    };
-  }, [dispatch, product.id]);
+  const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
 
   const handleIncrement = () => {
     if (quantity < product.stock) {
-      dispatch(
-        setComponentState({
-          component: `AddToCart_${product.id}`,
-          key: "quantity",
-          value: quantity + 1,
-        }),
-      );
+      setQuantity((prevQuantity) => prevQuantity + 1);
     }
   };
 
   const handleDecrement = () => {
-    dispatch(
-      setComponentState({
-        component: `AddToCart_${product.id}`,
-        key: "quantity",
-        value: quantity > 1 ? quantity - 1 : 1,
-      }),
-    );
+    setQuantity((prevQuantity) => (prevQuantity > 1 ? prevQuantity - 1 : 1));
   };
 
   const handleAddToCart = () => {

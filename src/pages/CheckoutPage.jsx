@@ -1,15 +1,10 @@
+// src/pages/CheckoutPage.jsx
 import React, { useEffect, useState } from "react";
 import { orderService } from "../services/orderService";
 import { useNavigate } from "react-router-dom";
-import { useDispatch, useSelector } from "react-redux";
-import { getCart, clearCart } from "../redux/cartSlice";
-import { fetchAddresses } from "../redux/addressSlice";
+
+import { useCart } from "../hooks/useCart";
 import { addressService } from "../services/addressService";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../redux/uiSlice";
 
 // --- estados iniciales ---
 const initialShipping = {
@@ -55,141 +50,80 @@ function money(n) {
   }
 }
 
-const CheckoutPage = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
+export default function CheckoutPage() {
+  const [step, setStep] = useState(1);
+  const [shipping, setShipping] = useState(initialShipping);
+  const [payment, setPayment] = useState(initialPayment);
+  const [terms, setTerms] = useState(false);
+  const [placing, setPlacing] = useState(false);
+  const [orderId, setOrderId] = useState(null);
+
   const {
-    cart,
+    cart, // El objeto completo del carrito
+    items: ctxCart, // El array de items
     loading: cartLoading,
-    error: cartError,
-  } = useSelector((state) => state.cart);
-  const {
-    addresses,
-    loading: addressLoading,
-    error: addressError,
-  } = useSelector((state) => state.address);
-
-  const {
-    step,
-    shipping = initialShipping,
-    payment = initialPayment,
-    selectedAddressId,
-    isNewAddress,
-    terms,
-    placing,
-    orderId,
-  } = useSelector((state) => state.ui.componentState.CheckoutPage) || {};
-
-  useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: "CheckoutPage",
-        initialState: {
-          step: 1,
-          shipping: initialShipping,
-          payment: initialPayment,
-          selectedAddressId: null,
-          isNewAddress: false,
-          terms: false,
-          placing: false,
-          orderId: null,
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: "CheckoutPage" }));
-    };
-  }, [dispatch]);
+    clearCart,
+  } = useCart();
 
   const totalToPay = cart?.total || 0;
+  const totalItems = cart?.items?.length || 0;
+  const navigate = useNavigate();
+
+  // Direcciones guardadas
+  const [addresses, setAddresses] = useState([]);
+  const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const [isNewAddress, setIsNewAddress] = useState(false);
+
+  const fetchAddresses = async () => {
+    try {
+      const response = await addressService.getAddresses();
+      setAddresses(response.data);
+      if (response.data.length > 0) {
+        setSelectedAddressId(response.data[0].addressId);
+      }
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+    }
+  };
 
   useEffect(() => {
-    dispatch(getCart());
-    dispatch(fetchAddresses());
-  }, [dispatch]);
+    fetchAddresses();
+  }, []);
 
   useEffect(() => {
     if (selectedAddressId === "new") {
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "isNewAddress",
-          value: true,
-        }),
-      );
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "shipping",
-          value: initialShipping,
-        }),
-      );
+      setIsNewAddress(true);
+      setShipping(initialShipping);
     } else {
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "isNewAddress",
-          value: false,
-        }),
-      );
+      setIsNewAddress(false);
       const a = addresses.find((x) => x.addressId === selectedAddressId);
       if (!a) return;
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "shipping",
-          value: {
-            name: a.name || "",
-            street: a.street || "",
-            apt: a.apt || "",
-            others: a.others || "",
-            postalCode: a.postalCode || "",
-          },
-        }),
-      );
+      setShipping({
+        name: a.name || "",
+        street: a.street || "",
+        apt: a.apt || "",
+        others: a.others || "",
+        postalCode: a.postalCode || "",
+      });
     }
-  }, [selectedAddressId, addresses, dispatch]);
+  }, [selectedAddressId, addresses]);
 
   const handleSaveAddress = async () => {
     try {
       await addressService.createAddress(shipping);
-      await dispatch(fetchAddresses());
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "isNewAddress",
-          value: false,
-        }),
-      );
+      await fetchAddresses();
+      setIsNewAddress(false);
     } catch {
       alert("Error al guardar la dirección.");
     }
   };
 
   const handleSelectAddress = (id) => {
-    dispatch(
-      setComponentState({
-        component: "CheckoutPage",
-        key: "selectedAddressId",
-        value: id,
-      }),
-    );
+    setSelectedAddressId(id);
     if (id === "new") {
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "isNewAddress",
-          value: true,
-        }),
-      );
+      setIsNewAddress(true);
     } else {
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "isNewAddress",
-          value: false,
-        }),
-      );
+      setIsNewAddress(false);
     }
   };
 
@@ -215,22 +149,9 @@ const CheckoutPage = () => {
       return alert("Completa los datos de envío.");
     if (step === 2 && !okPayment())
       return alert("Revisa los datos de la tarjeta.");
-    dispatch(
-      setComponentState({
-        component: "CheckoutPage",
-        key: "step",
-        value: Math.min(3, step + 1),
-      }),
-    );
+    setStep((s) => Math.min(3, s + 1));
   };
-  const back = () =>
-    dispatch(
-      setComponentState({
-        component: "CheckoutPage",
-        key: "step",
-        value: Math.max(1, step - 1),
-      }),
-    );
+  const back = () => setStep((s) => Math.max(1, s - 1));
 
   const placeOrder = async () => {
     if (isNewAddress) {
@@ -238,43 +159,25 @@ const CheckoutPage = () => {
       return;
     }
     if (!terms) return alert("Debes aceptar los términos.");
-    dispatch(
-      setComponentState({
-        component: "CheckoutPage",
-        key: "placing",
-        value: true,
-      }),
-    );
+    setPlacing(true);
     try {
       const orderDetails = {
         addressId: selectedAddressId,
         paymentMethod: payment.method,
-        items: cart.items.map((item) => ({
+        items: ctxCart.map((item) => ({
           productId: item.id,
           quantity: item.quantity,
           price: item.price,
         })),
       };
       const response = await orderService.createOrder(orderDetails);
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "orderId",
-          value: response.data.orderId,
-        }),
-      );
-      dispatch(clearCart());
+      setOrderId(response.data.orderId);
+      clearCart();
       navigate("/profile/orders");
     } catch {
       alert("Error al procesar el pedido. Por favor, inténtalo de nuevo.");
     } finally {
-      dispatch(
-        setComponentState({
-          component: "CheckoutPage",
-          key: "placing",
-          value: false,
-        }),
-      );
+      setPlacing(false);
     }
   };
 
@@ -382,13 +285,7 @@ const CheckoutPage = () => {
                           className="form-control"
                           value={shipping.name}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "shipping",
-                                value: { ...shipping, name: e.target.value },
-                              }),
-                            )
+                            setShipping({ ...shipping, name: e.target.value })
                           }
                         />
                       </div>
@@ -398,13 +295,7 @@ const CheckoutPage = () => {
                           className="form-control"
                           value={shipping.street}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "shipping",
-                                value: { ...shipping, street: e.target.value },
-                              }),
-                            )
+                            setShipping({ ...shipping, street: e.target.value })
                           }
                         />
                       </div>
@@ -414,13 +305,7 @@ const CheckoutPage = () => {
                           className="form-control"
                           value={shipping.apt}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "shipping",
-                                value: { ...shipping, apt: e.target.value },
-                              }),
-                            )
+                            setShipping({ ...shipping, apt: e.target.value })
                           }
                         />
                       </div>
@@ -430,16 +315,10 @@ const CheckoutPage = () => {
                           className="form-control"
                           value={shipping.postalCode}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "shipping",
-                                value: {
-                                  ...shipping,
-                                  postalCode: e.target.value,
-                                },
-                              }),
-                            )
+                            setShipping({
+                              ...shipping,
+                              postalCode: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -449,13 +328,7 @@ const CheckoutPage = () => {
                           className="form-control"
                           value={shipping.others}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "shipping",
-                                value: { ...shipping, others: e.target.value },
-                              }),
-                            )
+                            setShipping({ ...shipping, others: e.target.value })
                           }
                         />
                       </div>
@@ -480,7 +353,7 @@ const CheckoutPage = () => {
                 </form>
               )}
 
-              {step === 2 && payment && (
+              {step === 2 && (
                 <form
                   onSubmit={(e) => {
                     e.preventDefault();
@@ -497,14 +370,10 @@ const CheckoutPage = () => {
                         <input
                           type="radio"
                           name="paymethod"
+                          value="credit"
+                          checked={payment.method === "credit"}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "payment",
-                                value: { ...payment, method: e.target.value },
-                              }),
-                            )
+                            setPayment({ ...payment, method: e.target.value })
                           }
                         />
                         <span>Credit</span>
@@ -516,13 +385,7 @@ const CheckoutPage = () => {
                           value="debit"
                           checked={payment.method === "debit"}
                           onChange={(e) =>
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "payment",
-                                value: { ...payment, method: e.target.value },
-                              }),
-                            )
+                            setPayment({ ...payment, method: e.target.value })
                           }
                         />
                         <span>Debit</span>
@@ -539,13 +402,7 @@ const CheckoutPage = () => {
                         placeholder="1234 5678 9012 3456"
                         value={maskNum(payment.cardNumber)}
                         onChange={(e) =>
-                          dispatch(
-                            setComponentState({
-                              component: "CheckoutPage",
-                              key: "payment",
-                              value: { ...payment, cardNumber: e.target.value },
-                            }),
-                          )
+                          setPayment({ ...payment, cardNumber: e.target.value })
                         }
                       />
                     </div>
@@ -570,13 +427,7 @@ const CheckoutPage = () => {
                             raw.length >= 3
                               ? raw.slice(0, 2) + "/" + raw.slice(2)
                               : raw;
-                          dispatch(
-                            setComponentState({
-                              component: "CheckoutPage",
-                              key: "payment",
-                              value: { ...payment, expiry: v },
-                            }),
-                          );
+                          setPayment({ ...payment, expiry: v });
                         }}
                         onKeyDown={(e) => {
                           if (
@@ -584,16 +435,10 @@ const CheckoutPage = () => {
                             payment.expiry.endsWith("/")
                           ) {
                             e.preventDefault();
-                            dispatch(
-                              setComponentState({
-                                component: "CheckoutPage",
-                                key: "payment",
-                                value: {
-                                  ...payment,
-                                  expiry: payment.expiry.slice(0, 1),
-                                },
-                              }),
-                            );
+                            setPayment({
+                              ...payment,
+                              expiry: payment.expiry.slice(0, 1),
+                            });
                           }
                         }}
                       />
@@ -607,16 +452,10 @@ const CheckoutPage = () => {
                         placeholder="3-4 dígitos"
                         value={payment.cvv}
                         onChange={(e) =>
-                          dispatch(
-                            setComponentState({
-                              component: "CheckoutPage",
-                              key: "payment",
-                              value: {
-                                ...payment,
-                                cvv: e.target.value.replace(/\D/g, ""),
-                              },
-                            }),
-                          )
+                          setPayment({
+                            ...payment,
+                            cvv: e.target.value.replace(/\D/g, ""),
+                          })
                         }
                       />
                     </div>
@@ -700,15 +539,7 @@ const CheckoutPage = () => {
                       type="checkbox"
                       id="terms"
                       checked={terms}
-                      onChange={(e) =>
-                        dispatch(
-                          setComponentState({
-                            component: "CheckoutPage",
-                            key: "terms",
-                            value: e.target.checked,
-                          }),
-                        )
-                      }
+                      onChange={(e) => setTerms(e.target.checked)}
                     />
                     <label className="form-check-label small" htmlFor="terms">
                       Acepto los Términos y Condiciones y la Política de
@@ -784,6 +615,4 @@ const CheckoutPage = () => {
       </div>
     </div>
   );
-};
-
-export default CheckoutPage;
+}

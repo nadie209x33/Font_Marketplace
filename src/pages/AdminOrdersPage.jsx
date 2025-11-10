@@ -1,40 +1,38 @@
-import React, { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  fetchAdminOrders,
-  updateOrderStatus,
-  updatePaymentStatus,
-} from "../redux/orderSlice";
-import { LinkContainer } from "react-router-bootstrap";
-import {
-  Container,
-  Button,
-  Spinner,
-  Alert,
-  Table,
-  Badge,
-  ButtonGroup,
-  Modal,
-  Row,
-  Col,
-  Form,
-} from "react-bootstrap";
+import React, { useState, useEffect } from 'react';
+import { Container, Table, Button, Spinner, Alert, Badge, Modal, ButtonGroup, Form, Row, Col } from 'react-bootstrap';
+import { LinkContainer } from 'react-router-bootstrap';
+import apiClient from '../services/apiClient';
 
 const AdminOrdersPage = () => {
-  const dispatch = useDispatch();
-  const { adminOrders, loading, error } = useSelector((state) => state.order);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Details Modal State
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Edit Status Modal State
   const [editingOrder, setEditingOrder] = useState(null);
   const [showEditStatusModal, setShowEditStatusModal] = useState(false);
-  const [statusData, setStatusData] = useState({
-    orderStatus: "",
-    paymentStatus: "",
-  });
+  const [statusData, setStatusData] = useState({ orderStatus: '', paymentStatus: '' });
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get('/api/v1/admin/orders');
+      setOrders(response.data);
+    } catch (err) {
+      setError('Error al cargar los pedidos. Por favor, inténtalo de nuevo más tarde.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    dispatch(fetchAdminOrders());
-  }, [dispatch]);
+    fetchOrders();
+  }, []);
 
   const handleShowDetails = (order) => {
     setSelectedOrder(order);
@@ -48,10 +46,7 @@ const AdminOrdersPage = () => {
 
   const handleShowEditStatus = (order) => {
     setEditingOrder(order);
-    setStatusData({
-      orderStatus: order.orderStatus,
-      paymentStatus: order.paymentStatus,
-    });
+    setStatusData({ orderStatus: order.orderStatus, paymentStatus: order.paymentStatus });
     setShowEditStatusModal(true);
   };
 
@@ -62,44 +57,40 @@ const AdminOrdersPage = () => {
 
   const handleStatusFormChange = (e) => {
     const { name, value } = e.target;
-    setStatusData((prev) => ({ ...prev, [name]: value }));
+    setStatusData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleUpdateStatus = (e) => {
+  const handleUpdateStatus = async (e) => {
     e.preventDefault();
-    if (statusData.orderStatus !== editingOrder.orderStatus) {
-      dispatch(
-        updateOrderStatus({
-          orderId: editingOrder.orderId,
-          newStatus: statusData.orderStatus,
-        }),
-      );
+    try {
+      if (statusData.orderStatus !== editingOrder.orderStatus) {
+        await apiClient.patch(`/api/v1/orders/${editingOrder.orderId}/delivery-status`, { newStatus: statusData.orderStatus });
+      }
+      if (statusData.paymentStatus !== editingOrder.paymentStatus) {
+        await apiClient.patch(`/api/v1/orders/payment/${editingOrder.paymentId}`, { newStatus: statusData.paymentStatus });
+      }
+      handleCloseEditStatusModal();
+      fetchOrders(); // Refresh orders
+    } catch (err) {
+      console.error('Failed to update status', err);
+      // Optionally, show an error in the modal
     }
-    if (statusData.paymentStatus !== editingOrder.paymentStatus) {
-      dispatch(
-        updatePaymentStatus({
-          paymentId: editingOrder.paymentId,
-          newStatus: statusData.paymentStatus,
-        }),
-      );
-    }
-    handleCloseEditStatusModal();
   };
 
   const getStatusBadge = (status) => {
     switch (status) {
-      case "SUCCESS":
-      case "DELIVERED":
-        return "success";
-      case "WAITING":
-      case "PLACED":
-        return "warning";
-      case "FAILED":
-        return "danger";
-      case "START_DELIVERY":
-        return "info";
+      case 'SUCCESS':
+      case 'DELIVERED':
+        return 'success';
+      case 'WAITING':
+      case 'PLACED':
+        return 'warning';
+      case 'FAILED':
+        return 'danger';
+      case 'START_DELIVERY':
+        return 'info';
       default:
-        return "secondary";
+        return 'secondary';
     }
   };
 
@@ -134,7 +125,7 @@ const AdminOrdersPage = () => {
             </tr>
           </thead>
           <tbody>
-            {adminOrders.map((order) => (
+            {orders.map((order) => (
               <tr key={order.orderId}>
                 <td>{order.orderId}</td>
                 <td>{order.userEmail}</td>
@@ -152,20 +143,8 @@ const AdminOrdersPage = () => {
                 </td>
                 <td>
                   <ButtonGroup>
-                    <Button
-                      variant="outline-info"
-                      size="sm"
-                      onClick={() => handleShowDetails(order)}
-                    >
-                      Ver Detalles
-                    </Button>
-                    <Button
-                      variant="outline-primary"
-                      size="sm"
-                      onClick={() => handleShowEditStatus(order)}
-                    >
-                      Editar Estado
-                    </Button>
+                    <Button variant="outline-info" size="sm" onClick={() => handleShowDetails(order)}>Ver Detalles</Button>
+                    <Button variant="outline-primary" size="sm" onClick={() => handleShowEditStatus(order)}>Editar Estado</Button>
                   </ButtonGroup>
                 </td>
               </tr>
@@ -177,9 +156,7 @@ const AdminOrdersPage = () => {
       {/* Order Details Modal */}
       <Modal show={showDetailsModal} onHide={handleCloseDetailsModal} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>
-            Detalles del Pedido #{selectedOrder?.orderId}
-          </Modal.Title>
+          <Modal.Title>Detalles del Pedido #{selectedOrder?.orderId}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           {selectedOrder && (
@@ -187,29 +164,15 @@ const AdminOrdersPage = () => {
               <Row>
                 <Col md={6}>
                   <h5>Información de Entrega</h5>
-                  <p>
-                    <strong>Proveedor:</strong> {selectedOrder.deliveryProvider}
-                  </p>
-                  <p>
-                    <strong>Dirección:</strong> {selectedOrder.deliveryAddress}
-                  </p>
+                  <p><strong>Proveedor:</strong> {selectedOrder.deliveryProvider}</p>
+                  <p><strong>Dirección:</strong> {selectedOrder.deliveryAddress}</p>
                 </Col>
                 <Col md={6}>
                   <h5>Información de Pago</h5>
-                  <p>
-                    <strong>Método:</strong> {selectedOrder.paymentMethod}
-                  </p>
-                  <p>
-                    <strong>ID de Pago:</strong> {selectedOrder.paymentId}
-                  </p>
-                  <p>
-                    <strong>Fecha del Pedido:</strong>{" "}
-                    {new Date(selectedOrder.orderTimestamp).toLocaleString()}
-                  </p>
-                  <p>
-                    <strong>Fecha del Pago:</strong>{" "}
-                    {new Date(selectedOrder.paymentTimestamp).toLocaleString()}
-                  </p>
+                  <p><strong>Método:</strong> {selectedOrder.paymentMethod}</p>
+                  <p><strong>ID de Pago:</strong> {selectedOrder.paymentId}</p>
+                  <p><strong>Fecha del Pedido:</strong> {new Date(selectedOrder.orderTimestamp).toLocaleString()}</p>
+                  <p><strong>Fecha del Pago:</strong> {new Date(selectedOrder.paymentTimestamp).toLocaleString()}</p>
                 </Col>
               </Row>
               <hr />
@@ -236,28 +199,20 @@ const AdminOrdersPage = () => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleCloseDetailsModal}>
-            Cerrar
-          </Button>
+          <Button variant="secondary" onClick={handleCloseDetailsModal}>Cerrar</Button>
         </Modal.Footer>
       </Modal>
 
       {/* Edit Status Modal */}
       <Modal show={showEditStatusModal} onHide={handleCloseEditStatusModal}>
         <Modal.Header closeButton>
-          <Modal.Title>
-            Editar Estado del Pedido #{editingOrder?.orderId}
-          </Modal.Title>
+          <Modal.Title>Editar Estado del Pedido #{editingOrder?.orderId}</Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleUpdateStatus}>
           <Modal.Body>
             <Form.Group className="mb-3">
               <Form.Label>Estado de Pago</Form.Label>
-              <Form.Select
-                name="paymentStatus"
-                value={statusData.paymentStatus}
-                onChange={handleStatusFormChange}
-              >
+              <Form.Select name="paymentStatus" value={statusData.paymentStatus} onChange={handleStatusFormChange}>
                 <option value="WAITING">WAITING</option>
                 <option value="SUCCESS">SUCCESS</option>
                 <option value="FAILED">FAILED</option>
@@ -265,11 +220,7 @@ const AdminOrdersPage = () => {
             </Form.Group>
             <Form.Group>
               <Form.Label>Estado del Pedido</Form.Label>
-              <Form.Select
-                name="orderStatus"
-                value={statusData.orderStatus}
-                onChange={handleStatusFormChange}
-              >
+              <Form.Select name="orderStatus" value={statusData.orderStatus} onChange={handleStatusFormChange}>
                 <option value="PLACED">PLACED</option>
                 <option value="START_DELIVERY">START_DELIVERY</option>
                 <option value="DELIVERED">DELIVERED</option>
@@ -277,12 +228,8 @@ const AdminOrdersPage = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={handleCloseEditStatusModal}>
-              Cancelar
-            </Button>
-            <Button variant="primary" type="submit">
-              Guardar Cambios
-            </Button>
+            <Button variant="secondary" onClick={handleCloseEditStatusModal}>Cancelar</Button>
+            <Button variant="primary" type="submit">Guardar Cambios</Button>
           </Modal.Footer>
         </Form>
       </Modal>

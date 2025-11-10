@@ -1,12 +1,7 @@
+import React, { useState } from "react";
 import { Carousel } from "react-bootstrap";
 import AuthImage from "../AuthImage";
 import styled from "styled-components";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../../../redux/uiSlice";
 
 const ZoomableImageContainer = styled.div`
   overflow: hidden;
@@ -58,36 +53,10 @@ const Thumbnail = styled.div`
 `;
 
 const CarruselMain = ({ imageIds = [] }) => {
-  const dispatch = useDispatch();
-  const componentId = React.useId();
-  const { index } = useSelector(
-    (state) => state.ui.componentState[`CarruselMain_${componentId}`],
-  ) || { index: 0 };
-
-  React.useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: `CarruselMain_${componentId}`,
-        initialState: {
-          index: 0,
-        },
-      }),
-    );
-    return () => {
-      dispatch(
-        clearComponentState({ component: `CarruselMain_${componentId}` }),
-      );
-    };
-  }, [dispatch, componentId]);
+  const [index, setIndex] = useState(0);
 
   const handleSelect = (selectedIndex) => {
-    dispatch(
-      setComponentState({
-        component: `CarruselMain_${componentId}`,
-        key: "index",
-        value: selectedIndex,
-      }),
-    );
+    setIndex(selectedIndex);
   };
 
   if (imageIds.length === 0) {
@@ -120,15 +89,7 @@ const CarruselMain = ({ imageIds = [] }) => {
           <Thumbnail
             key={id}
             className={idx === index ? "active" : ""}
-            onClick={() =>
-              dispatch(
-                setComponentState({
-                  component: `CarruselMain_${componentId}`,
-                  key: "index",
-                  value: idx,
-                }),
-              )
-            }
+            onClick={() => setIndex(idx)}
           >
             <AuthImage imageId={id} alt={`Thumbnail ${idx + 1}`} />
           </Thumbnail>

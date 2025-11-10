@@ -1,141 +1,43 @@
-import React, { useState } from "react";
-import { useAuth } from "../hooks/useAuth";
-import { userService } from "../services/userService";
-import { Form, Button, Card, Alert, Spinner } from "react-bootstrap";
-import { useDispatch, useSelector } from "react-redux";
-import {
-  setComponentState,
-  clearComponentState,
-  setInitialComponentState,
-} from "../redux/uiSlice";
+import React, { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { userService } from '../services/userService';
+import { Form, Button, Card, Alert, Spinner } from 'react-bootstrap';
 
 const ProfileInformationPage = () => {
   const { user } = useAuth();
-  const dispatch = useDispatch();
-  const {
-    oldPassword = "",
-    newPassword = "",
-    confirmPassword = "",
-    error,
-    success,
-    loading,
-  } = useSelector((state) => state.ui.componentState.ProfileInformationPage) ||
-  {};
-
-  React.useEffect(() => {
-    dispatch(
-      setInitialComponentState({
-        component: "ProfileInformationPage",
-        initialState: {
-          oldPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-          error: "",
-          success: "",
-          loading: false,
-        },
-      }),
-    );
-    return () => {
-      dispatch(clearComponentState({ component: "ProfileInformationPage" }));
-    };
-  }, [dispatch]);
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    dispatch(
-      setComponentState({
-        component: "ProfileInformationPage",
-        key: "error",
-        value: "",
-      }),
-    );
-    dispatch(
-      setComponentState({
-        component: "ProfileInformationPage",
-        key: "success",
-        value: "",
-      }),
-    );
+    setError('');
+    setSuccess('');
 
     if (newPassword !== confirmPassword) {
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "error",
-          value: "Las contraseñas nuevas no coinciden.",
-        }),
-      );
+      setError('Las contraseñas nuevas no coinciden.');
       return;
     }
 
-    if (newPassword.length < 6) {
-      // Example validation
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "error",
-          value: "La nueva contraseña debe tener al menos 6 caracteres.",
-        }),
-      );
-      return;
+    if (newPassword.length < 6) { // Example validation
+        setError('La nueva contraseña debe tener al menos 6 caracteres.');
+        return;
     }
 
-    dispatch(
-      setComponentState({
-        component: "ProfileInformationPage",
-        key: "loading",
-        value: true,
-      }),
-    );
+    setLoading(true);
     try {
       await userService.changePassword({ oldPassword, newPassword });
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "success",
-          value: "¡Contraseña cambiada con éxito!",
-        }),
-      );
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "oldPassword",
-          value: "",
-        }),
-      );
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "newPassword",
-          value: "",
-        }),
-      );
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "confirmPassword",
-          value: "",
-        }),
-      );
+      setSuccess('¡Contraseña cambiada con éxito!');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
     } catch (err) {
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "error",
-          value:
-            err.response?.data?.message ||
-            "Error al cambiar la contraseña. Por favor, verifica tu contraseña anterior.",
-        }),
-      );
+      setError(err.response?.data?.message || 'Error al cambiar la contraseña. Por favor, verifica tu contraseña anterior.');
     } finally {
-      dispatch(
-        setComponentState({
-          component: "ProfileInformationPage",
-          key: "loading",
-          value: false,
-        }),
-      );
+      setLoading(false);
     }
   };
 
@@ -162,15 +64,7 @@ const ProfileInformationPage = () => {
             <Form.Control
               type="password"
               value={oldPassword}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "ProfileInformationPage",
-                    key: "oldPassword",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setOldPassword(e.target.value)}
               required
             />
           </Form.Group>
@@ -180,15 +74,7 @@ const ProfileInformationPage = () => {
             <Form.Control
               type="password"
               value={newPassword}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "ProfileInformationPage",
-                    key: "newPassword",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setNewPassword(e.target.value)}
               required
             />
           </Form.Group>
@@ -198,31 +84,13 @@ const ProfileInformationPage = () => {
             <Form.Control
               type="password"
               value={confirmPassword}
-              onChange={(e) =>
-                dispatch(
-                  setComponentState({
-                    component: "ProfileInformationPage",
-                    key: "confirmPassword",
-                    value: e.target.value,
-                  }),
-                )
-              }
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </Form.Group>
 
           <Button variant="primary" type="submit" disabled={loading}>
-            {loading ? (
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-              />
-            ) : (
-              "Cambiar Contraseña"
-            )}
+            {loading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Cambiar Contraseña'}
           </Button>
         </Form>
       </Card.Body>
