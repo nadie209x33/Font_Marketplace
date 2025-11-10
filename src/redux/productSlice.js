@@ -44,7 +44,19 @@ export const fetchProductData = createAsyncThunk(
         breadcrumbs = path;
       }
 
-      const relatedProducts = []; // Logic for related products can be complex, keeping it simple for now
+      let relatedProducts = [];
+      if (product.categoryId) {
+        const response = await productService.getProducts(token, {
+          categoryId: product.categoryId,
+          page: 0,
+          size: 7, // Fetch a few extra to filter out the current product
+        });
+        if (response && response.products) {
+          relatedProducts = response.products
+            .filter((p) => p.id !== product.id)
+            .slice(0, 6);
+        }
+      }
 
       return { product, breadcrumbs, relatedProducts };
     } catch (error) {

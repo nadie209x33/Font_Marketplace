@@ -5,7 +5,7 @@ import cartReducer from "./cartSlice";
 import productReducer from "./productSlice";
 import categoryReducer from "./categorySlice";
 import { combineReducers } from "redux";
-import { authReducer } from "@reduxjs/toolkit";
+import authReducer from "./authSlice";
 
 const persistConfig = {
   key: "root",
