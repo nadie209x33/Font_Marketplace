@@ -10,7 +10,7 @@ import { authReducer } from "@reduxjs/toolkit";
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "cart"], // We'll persist the auth and cart state
+  whitelist: ["auth", "cart"],
 };
 
 const rootReducer = combineReducers({
